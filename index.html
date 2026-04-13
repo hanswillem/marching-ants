@@ -1,0 +1,1240 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link
+            href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap"
+            rel="stylesheet"
+        />
+        <title>Marching Ants</title>
+        <style>
+            :root {
+                --blue: #0000ff;
+                --white: #ffffff;
+            }
+
+            * {
+                box-sizing: border-box;
+                margin: 0;
+                padding: 0;
+            }
+
+            body {
+                background: var(--blue);
+                color: var(--white);
+                font-family: "Roboto", sans-serif;
+                font-size: 13px;
+                display: flex;
+                flex-direction: column;
+                height: 100vh;
+                overflow: hidden;
+                user-select: none;
+            }
+
+            /* ── Toolbar (top bar) ───────────────────────────────────────── */
+            #toolbar {
+                background: var(--blue);
+                height: 45px;
+                display: flex;
+                align-items: stretch;
+                justify-content: center;
+                flex-shrink: 0;
+                flex-wrap: nowrap;
+                overflow: hidden;
+            }
+
+            /* ── Canvas area ─────────────────────────────────────────────── */
+            #canvas-area {
+                flex: 1;
+                overflow: auto;
+                background: #ffffff;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+
+            #main-canvas {
+                display: block;
+                flex-shrink: 0;
+                cursor: crosshair;
+                background: #fff;
+                outline: 1px solid var(--blue);
+                /* size = HTML attributes: fixed 1920×1080 */
+            }
+
+            /* ── Bottom bar ──────────────────────────────────────────────── */
+            #bottom-bar {
+                background: var(--blue);
+                height: 45px;
+                display: flex;
+                align-items: stretch;
+                justify-content: center;
+                flex-shrink: 0;
+                overflow: hidden;
+            }
+
+            /* ── Buttons ─────────────────────────────────────────────────── */
+            button {
+                background: var(--blue);
+                border: none;
+                border-top: 1px solid transparent;
+                border-bottom: 1px solid transparent;
+                border-left: 1px solid var(--white);
+                border-right: 1px solid var(--white);
+                color: var(--white);
+                padding: 0 16px;
+                font-family: "Roboto", sans-serif;
+                font-size: 13px;
+                font-weight: 400;
+                cursor: pointer;
+                letter-spacing: 0.03em;
+                white-space: nowrap;
+                transition:
+                    background-color 0.1s,
+                    color 0.1s,
+                    border-color 0.1s;
+                border-radius: 0;
+                margin: 0 -1px;
+                flex-shrink: 0;
+                height: 100%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                -webkit-appearance: none;
+                appearance: none;
+                outline: none;
+                box-shadow: none;
+                position: relative;
+            }
+            button:focus,
+            button:focus-visible {
+                outline: none;
+                box-shadow: none;
+            }
+            button:hover:not(:disabled):not(.force-inactive) {
+                background-color: var(--white);
+                color: var(--blue);
+                border-top-color: var(--white);
+                border-bottom-color: var(--white);
+            }
+            button.force-inactive {
+                background-color: var(--blue) !important;
+                color: var(--white) !important;
+                border-top-color: transparent !important;
+                border-bottom-color: transparent !important;
+            }
+            button:disabled {
+                opacity: 0.35;
+                cursor: not-allowed;
+            }
+            button.active {
+                background-color: var(--white);
+                color: var(--blue);
+                border-top-color: var(--white);
+                border-bottom-color: var(--white);
+            }
+
+            /* ── FPS group (number + label as one undivided block) ───────── */
+            #fps-group {
+                display: flex;
+                align-items: center;
+                /* no left border — the group is flush at the start of the bar content */
+                border-right: 1px solid var(--white);
+                margin: 0 -1px 0 0; /* only collapse the right border */
+                padding: 0 0 0 14px; /* left indent matches button padding */
+                flex-shrink: 0;
+                position: relative;
+            }
+
+            #fps-num {
+                background: transparent;
+                border: none;
+                color: var(--white);
+                font-family: "Roboto", sans-serif;
+                font-size: 13px;
+                font-weight: 400;
+                width: 24px; /* just wide enough for two digits */
+                height: 100%;
+                text-align: center;
+                padding: 0;
+                flex-shrink: 0;
+                -moz-appearance: textfield;
+                outline: none;
+            }
+            #fps-num::-webkit-inner-spin-button,
+            #fps-num::-webkit-outer-spin-button {
+                display: none;
+            }
+            #fps-num:focus {
+                outline: none;
+            }
+
+            #fps-label {
+                color: var(--white);
+                font-family: "Roboto", sans-serif;
+                font-size: 13px;
+                font-weight: 400;
+                padding: 0 10px 0 4px; /* 4px gap after the number, 10px before the border */
+                pointer-events: none;
+                flex-shrink: 0;
+            }
+
+            /* ── Opacity slider ──────────────────────────────────────────── */
+            #ref-opacity-label {
+                color: var(--white);
+                font-family: "Roboto", sans-serif;
+                font-size: 13px;
+                font-weight: 400;
+                padding: 0 0 0 14px;
+                pointer-events: none;
+                flex-shrink: 0;
+                align-self: center;
+            }
+            #ref-opacity-slider {
+                -webkit-appearance: none;
+                appearance: none;
+                height: 2px;
+                background: rgba(255, 255, 255, 0.4);
+                width: 80px;
+                margin: 0 12px 0 8px;
+                flex-shrink: 0;
+                cursor: pointer;
+                outline: none;
+                align-self: center;
+            }
+            #ref-opacity-slider::-webkit-slider-thumb {
+                -webkit-appearance: none;
+                width: 12px;
+                height: 12px;
+                border-radius: 50%;
+                background: var(--white);
+                cursor: pointer;
+            }
+
+            /* ── Frame tabs ──────────────────────────────────────────────── */
+            .frame-tab {
+                background: var(--blue);
+                border: none;
+                border-top: 1px solid transparent;
+                border-bottom: 1px solid transparent;
+                border-left: 1px solid var(--white);
+                border-right: 1px solid var(--white);
+                color: var(--white);
+                width: 45px;
+                height: 100%;
+                font-family: "Roboto", sans-serif;
+                font-size: 13px;
+                font-weight: 400;
+                cursor: pointer;
+                position: relative;
+                margin: 0 -1px;
+                flex-shrink: 0;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                transition:
+                    background-color 0.1s,
+                    color 0.1s;
+                -webkit-appearance: none;
+                appearance: none;
+                outline: none;
+                box-shadow: none;
+            }
+            .frame-tab:focus,
+            .frame-tab:focus-visible {
+                outline: none;
+                box-shadow: none;
+            }
+            .frame-tab.active {
+                background-color: var(--white);
+                color: var(--blue);
+                border-top-color: var(--white);
+                border-bottom-color: var(--white);
+            }
+            .frame-tab:hover:not(.active) {
+                background-color: var(--white);
+                color: var(--blue);
+                border-top-color: var(--white);
+                border-bottom-color: var(--white);
+            }
+
+            .tab-del {
+                position: absolute;
+                top: 3px;
+                right: 4px;
+                font-size: 9px;
+                line-height: 1;
+                opacity: 0;
+                pointer-events: none;
+                transition: opacity 0.1s;
+            }
+            .frame-tab:hover .tab-del,
+            .frame-tab.active .tab-del {
+                opacity: 1;
+                pointer-events: auto;
+            }
+
+            /* first element in toolbar has no left border */
+            #undo-btn {
+                border-left: none;
+                margin: 0 -1px 0 0;
+            }
+
+            /* last element in each bar has no right border */
+            #add-frame-btn {
+                border-right: none;
+                margin: 0 0 0 -1px;
+            }
+            #export-btn {
+                border-right: none;
+                margin: 0 0 0 -1px;
+            }
+
+            /* Play button: fixed width so ▶ and ⏸ don't shift layout */
+            #play-btn {
+                width: 45px;
+                padding: 0;
+                flex-shrink: 0;
+            }
+        </style>
+    </head>
+    <body>
+        <!-- ── Toolbar ─────────────────────────────────────────────────── -->
+        <div id="toolbar">
+            <button id="undo-btn" disabled>Undo</button>
+            <button id="clear-btn">Clear Frame</button>
+            <button id="onion-btn">Onion Skinning</button>
+            <button id="ref-toggle-btn">Upload Image</button>
+            <input
+                type="file"
+                id="ref-file"
+                accept="image/*"
+                style="display: none"
+            />
+            <span id="ref-opacity-label" style="display: none">Opacity</span>
+            <input
+                type="range"
+                id="ref-opacity-slider"
+                min="0"
+                max="100"
+                value="100"
+                style="display: none"
+            />
+            <button id="export-btn">Export</button>
+        </div>
+
+        <!-- ── Canvas ─────────────────────────────────────────────────── -->
+        <div id="canvas-area">
+            <canvas id="main-canvas" width="800" height="600"></canvas>
+        </div>
+
+        <!-- ── Bottom bar ──────────────────────────────────────────────── -->
+        <div id="bottom-bar">
+            <div id="fps-group">
+                <input type="number" id="fps-num" min="1" max="24" value="6" />
+                <span id="fps-label">FPS</span>
+            </div>
+            <button id="play-btn" title="Play / Pause  (Space)">▶</button>
+            <button id="add-frame-btn" title="Add frame  (max 24)">+</button>
+        </div>
+
+        <script>
+            // ═══════════════════════════════════════════════════════════════
+            //  State
+            // ═══════════════════════════════════════════════════════════════
+            const state = {
+                frames: [{ strokes: [] }],
+                currentFrameIndex: 0,
+                isPlaying: false,
+                fps: 6,
+
+                // Marching-ants style
+                dashLength: 6, // dash length (px)
+                gapLength: 6, // gap length (px)
+                antSpeed: 40, // px/sec
+                dashOffset: 0, // global animated offset (diagonal shift)
+
+                // Reference image (shared across all frames)
+                referenceImage: null,
+                refOpacity: 1.0,
+
+                // Drawing
+                isDrawing: false,
+                drawMode: "freehand", // 'freehand' | 'line'
+                mouseDownPos: null,
+                currentStroke: null, // freehand stroke being built
+                previewStroke: null, // preview for line / polyline next segment
+
+                // Polyline mode
+                polylineActive: false,
+                polylinePoints: [],
+
+                // Onion skinning
+                onionSkin: false,
+
+                // Undo — stack of {frameIndex, strokes} snapshots
+                undoStack: [],
+
+                // Timing
+                lastTs: null,
+                frameTimer: 0,
+            };
+
+            // ═══════════════════════════════════════════════════════════════
+            //  Canvas — resize to fill its container exactly
+            // ═══════════════════════════════════════════════════════════════
+            const canvas = document.getElementById("main-canvas");
+            const ctx = canvas.getContext("2d");
+
+            // Fixed 1920×1080 artboard — never resizes.
+            canvas.width = 1920;
+            canvas.height = 1080;
+
+            function getPos(e) {
+                const r = canvas.getBoundingClientRect();
+                return {
+                    x: (e.clientX - r.left) * (canvas.width / r.width),
+                    y: (e.clientY - r.top) * (canvas.height / r.height),
+                };
+            }
+
+            // ═══════════════════════════════════════════════════════════════
+            //  Rendering
+            // ═══════════════════════════════════════════════════════════════
+
+            // Preview stroke: two-pass B/W (black dashes + white dashes filling the gaps).
+            // Anti-aliasing is acceptable here — this is just the transient preview line.
+            function drawStroke(c, stroke, dashOffset, alpha) {
+                if (!stroke || stroke.points.length < 2) return;
+                c.save();
+                c.globalAlpha = alpha;
+                c.lineWidth = 1;
+                c.lineCap = "butt";
+                c.lineJoin = "round";
+
+                const dL = state.dashLength,
+                    gL = state.gapLength;
+
+                // Pass 1 — black dashes
+                c.strokeStyle = "#000000";
+                c.setLineDash([dL, gL]);
+                c.lineDashOffset = -dashOffset;
+                c.beginPath();
+                c.moveTo(stroke.points[0].x, stroke.points[0].y);
+                for (let i = 1; i < stroke.points.length; i++)
+                    c.lineTo(stroke.points[i].x, stroke.points[i].y);
+                c.stroke();
+
+                // Pass 2 — white dashes filling the gaps exactly
+                c.strokeStyle = "#ffffff";
+                c.setLineDash([gL, dL]);
+                c.lineDashOffset = -(dashOffset + dL);
+                c.beginPath();
+                c.moveTo(stroke.points[0].x, stroke.points[0].y);
+                for (let i = 1; i < stroke.points.length; i++)
+                    c.lineTo(stroke.points[i].x, stroke.points[i].y);
+                c.stroke();
+
+                c.restore();
+            }
+
+            // Onion skin: draw strokes from another frame in a single tint colour
+            function drawOnionFrame(c, frameIndex, color, alpha) {
+                const strokes = state.frames[frameIndex]?.strokes;
+                if (!strokes?.length) return;
+                c.save();
+                c.globalAlpha = alpha;
+                c.lineWidth = 1;
+                c.lineCap = "butt";
+                c.lineJoin = "round";
+                c.setLineDash([state.dashLength, state.gapLength]);
+                c.lineDashOffset = -state.dashOffset;
+                c.strokeStyle = color;
+                for (const stroke of strokes) {
+                    if (stroke.points.length < 2) continue;
+                    c.beginPath();
+                    c.moveTo(stroke.points[0].x, stroke.points[0].y);
+                    for (let i = 1; i < stroke.points.length; i++) {
+                        c.lineTo(stroke.points[i].x, stroke.points[i].y);
+                    }
+                    c.stroke();
+                }
+                c.restore();
+            }
+
+            // ─── Bresenham pixel-perfect B/W rendering ────────────────────────────────
+            //
+            // Each stroke is rasterised pixel-by-pixel with Bresenham's line algorithm.
+            // Every pixel on the path is assigned a colour — black for the "dash" phase,
+            // white for the "gap" phase — so alternating B/W dashes cover the full line,
+            // always visible on any background (same as classic Photoshop marching ants).
+            // Processing stroke-by-stroke means crossing strokes overdraw each other,
+            // which gives a clean layered look.
+
+            let _mask = new Uint8Array(0); // reused each frame; grown if canvas resizes
+            const _dirty = []; // indices of set mask cells → fast clear
+
+            function _setMaskColor(px, py, W, H, color) {
+                if (px < 0 || px >= W || py < 0 || py >= H) return;
+                const i = py * W + px;
+                if (!_mask[i]) _dirty.push(i);
+                _mask[i] = color; // 1 = black, 2 = white
+            }
+
+            function _applyMask(data) {
+                for (const i of _dirty) {
+                    const p = i * 4;
+                    if (_mask[i] === 1) {
+                        data[p] = 0;
+                        data[p + 1] = 0;
+                        data[p + 2] = 0;
+                        data[p + 3] = 255;
+                    } else {
+                        data[p] = 255;
+                        data[p + 1] = 255;
+                        data[p + 2] = 255;
+                        data[p + 3] = 255;
+                    }
+                    _mask[i] = 0;
+                }
+                _dirty.length = 0;
+            }
+
+            function _bresenham(x0, y0, x1, y1, cb) {
+                x0 = Math.round(x0);
+                y0 = Math.round(y0);
+                x1 = Math.round(x1);
+                y1 = Math.round(y1);
+                const dx = Math.abs(x1 - x0),
+                    dy = Math.abs(y1 - y0);
+                const sx = x0 < x1 ? 1 : -1,
+                    sy = y0 < y1 ? 1 : -1;
+                let err = dx - dy,
+                    x = x0,
+                    y = y0;
+                while (true) {
+                    const done = x === x1 && y === y1;
+                    cb(x, y, done);
+                    if (done) break;
+                    const e2 = 2 * err;
+                    if (e2 > -dy) {
+                        err -= dy;
+                        x += sx;
+                    }
+                    if (e2 < dx) {
+                        err += dx;
+                        y += sy;
+                    }
+                }
+            }
+
+            // opts: { frameIndex, includeInProgress, dashOffset, scaleX, scaleY }
+            // All opts are optional and fall back to current state values.
+            function renderStrokesBresenham(imageData, opts) {
+                const {
+                    frameIndex = state.currentFrameIndex,
+                    includeInProgress = true,
+                    dashOffset: dOff = state.dashOffset,
+                    scaleX = 1,
+                    scaleY = 1,
+                } = opts || {};
+
+                const { data, width: W, height: H } = imageData;
+                if (_mask.length < W * H) _mask = new Uint8Array(W * H);
+
+                const dL = state.dashLength;
+                const period = dL + state.gapLength;
+                const iOff = Math.floor(dOff);
+
+                function processStroke(points) {
+                    if (points.length < 2) return;
+                    let d = 0;
+                    for (let s = 0; s < points.length - 1; s++) {
+                        const last = s === points.length - 2;
+                        _bresenham(
+                            points[s].x * scaleX,
+                            points[s].y * scaleY,
+                            points[s + 1].x * scaleX,
+                            points[s + 1].y * scaleY,
+                            (x, y, done) => {
+                                if (!last && done) return; // skip shared joint pixel
+                                const phase =
+                                    (((d + iOff) % period) + period) % period;
+                                _setMaskColor(x, y, W, H, phase < dL ? 1 : 2); // 1=black, 2=white
+                                d++;
+                            },
+                        );
+                    }
+                    _applyMask(data); // apply per-stroke so later strokes draw on top
+                }
+
+                const frame = state.frames[frameIndex];
+                for (const stroke of frame.strokes)
+                    processStroke(stroke.points);
+                if (
+                    includeInProgress &&
+                    frameIndex === state.currentFrameIndex
+                ) {
+                    if (state.currentStroke)
+                        processStroke(state.currentStroke.points);
+                    if (
+                        state.polylineActive &&
+                        state.polylinePoints.length >= 2
+                    )
+                        processStroke(state.polylinePoints);
+                }
+            }
+
+            function render() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                // White background
+                ctx.fillStyle = "#ffffff";
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                // Reference image — 100% natural size, centred
+                if (state.referenceImage) {
+                    const img = state.referenceImage;
+                    const rx = Math.round((canvas.width - img.width) / 2);
+                    const ry = Math.round((canvas.height - img.height) / 2);
+                    ctx.save();
+                    ctx.globalAlpha = state.refOpacity;
+                    ctx.drawImage(img, rx, ry);
+                    ctx.restore();
+                }
+
+                // Onion skin — previous frame only
+                if (state.onionSkin && !state.isPlaying) {
+                    const i = state.currentFrameIndex;
+                    if (i - 1 >= 0) drawOnionFrame(ctx, i - 1, "#e03030", 0.35);
+                }
+
+                // Bresenham B/W rendering for committed + in-progress strokes
+                const imageData = ctx.getImageData(
+                    0,
+                    0,
+                    canvas.width,
+                    canvas.height,
+                );
+                renderStrokesBresenham(imageData);
+                ctx.putImageData(imageData, 0, 0);
+
+                // Preview stroke (Canvas path — anti-aliasing is acceptable for preview)
+                if (state.previewStroke)
+                    drawStroke(ctx, state.previewStroke, state.dashOffset, 0.4);
+
+                // Artboard outline is provided by the 1px CSS padding on #canvas-area (blue background).
+            }
+
+            // ═══════════════════════════════════════════════════════════════
+            //  Animation loop
+            // ═══════════════════════════════════════════════════════════════
+            const ANT_FPS = 24; // ant animation steps per second
+            let antTimer = 0; // accumulator for ant step timing
+
+            function loop(ts) {
+                if (state.lastTs === null) state.lastTs = ts;
+                const dt = Math.min((ts - state.lastTs) / 1000, 0.1);
+                state.lastTs = ts;
+
+                // Advance ant offset in discrete 1/24 s steps for clean export alignment
+                antTimer += dt;
+                const antStep = 1 / ANT_FPS;
+                while (antTimer >= antStep) {
+                    antTimer -= antStep;
+                    state.dashOffset += state.antSpeed / ANT_FPS;
+                }
+
+                if (state.isPlaying) {
+                    // Advance frame timer
+                    state.frameTimer += dt;
+                    const frameDuration = 1 / state.fps;
+                    if (state.frameTimer >= frameDuration) {
+                        state.frameTimer -= frameDuration;
+                        state.currentFrameIndex =
+                            (state.currentFrameIndex + 1) % state.frames.length;
+                        highlightActiveFrame();
+                    }
+                }
+
+                render();
+                requestAnimationFrame(loop);
+            }
+            requestAnimationFrame(loop);
+
+            // ═══════════════════════════════════════════════════════════════
+            //  Mouse events
+            // ═══════════════════════════════════════════════════════════════
+
+            canvas.addEventListener("mousedown", (e) => {
+                if (e.button !== 0) return;
+                if (state.isPlaying) return; // no drawing while playing
+                e.preventDefault();
+
+                const pos = getPos(e);
+
+                // ── Polyline mode: add anchor ────────────────────────────────
+                if (state.polylineActive) {
+                    state.polylinePoints.push({ ...pos });
+                    return;
+                }
+
+                // ── CTRL / CMD: enter polyline mode ──────────────────────────
+                if (e.ctrlKey || e.metaKey) {
+                    state.polylineActive = true;
+                    state.polylinePoints = [{ ...pos }];
+                    state.previewStroke = { points: [{ ...pos }, { ...pos }] };
+                    document.getElementById("mode-badge") &&
+                        document
+                            .getElementById("mode-badge")
+                            .classList.add("on");
+                    return;
+                }
+
+                // ── SHIFT: straight-line mode ─────────────────────────────────
+                if (e.shiftKey) {
+                    state.isDrawing = true;
+                    state.drawMode = "line";
+                    state.mouseDownPos = { ...pos };
+                    state.previewStroke = { points: [{ ...pos }, { ...pos }] };
+                    return;
+                }
+
+                // ── Default: freehand ─────────────────────────────────────────
+                state.isDrawing = true;
+                state.drawMode = "freehand";
+                state.currentStroke = { points: [{ ...pos }] };
+            });
+
+            canvas.addEventListener("mousemove", (e) => {
+                const pos = getPos(e);
+
+                if (state.polylineActive) {
+                    const last =
+                        state.polylinePoints[state.polylinePoints.length - 1];
+                    state.previewStroke = { points: [{ ...last }, { ...pos }] };
+                    return;
+                }
+
+                if (!state.isDrawing) return;
+
+                if (state.drawMode === "freehand") {
+                    state.currentStroke.points.push({ ...pos });
+                } else if (state.drawMode === "line") {
+                    state.previewStroke = {
+                        points: [{ ...state.mouseDownPos }, { ...pos }],
+                    };
+                }
+            });
+
+            canvas.addEventListener("mouseup", (e) => {
+                if (e.button !== 0 || !state.isDrawing) return;
+
+                if (state.drawMode === "freehand") {
+                    if (
+                        state.currentStroke &&
+                        state.currentStroke.points.length >= 2
+                    ) {
+                        commitStroke(state.currentStroke);
+                    }
+                    state.currentStroke = null;
+                } else if (state.drawMode === "line") {
+                    const p = state.previewStroke;
+                    if (
+                        p &&
+                        (p.points[0].x !== p.points[1].x ||
+                            p.points[0].y !== p.points[1].y)
+                    ) {
+                        commitStroke({
+                            points: [{ ...p.points[0] }, { ...p.points[1] }],
+                        });
+                    }
+                    state.previewStroke = null;
+                }
+
+                state.isDrawing = false;
+                state.drawMode = "freehand";
+                state.mouseDownPos = null;
+            });
+
+            // dblclick commits polyline
+            canvas.addEventListener("dblclick", (e) => {
+                if (!state.polylineActive) return;
+                // Second mousedown of dblclick pushed an extra point — remove it
+                if (state.polylinePoints.length > 1) state.polylinePoints.pop();
+                finishPolyline();
+            });
+
+            // Prevent context menu when Ctrl+clicking on canvas
+            canvas.addEventListener("contextmenu", (e) => e.preventDefault());
+
+            // Keyboard shortcuts
+            document.addEventListener("keydown", (e) => {
+                // Don't fire shortcuts when typing in an input
+                const inInput = e.target.tagName === "INPUT";
+
+                if (e.key === "Escape") {
+                    if (state.polylineActive) {
+                        state.previewStroke = null; // discard cursor-preview segment before finalising
+                        finishPolyline(); // commit only the placed anchors
+                    }
+                    if (state.isDrawing) {
+                        state.isDrawing = false;
+                        state.currentStroke = null;
+                        state.previewStroke = null;
+                    }
+                }
+                if (e.code === "Space" && e.target === document.body) {
+                    e.preventDefault();
+                    togglePlay();
+                }
+                if ((e.ctrlKey || e.metaKey) && e.key === "z") {
+                    e.preventDefault();
+                    undo();
+                }
+                if (!inInput && !e.ctrlKey && !e.metaKey && !e.altKey) {
+                    if (e.key === "f" || e.key === "F") {
+                        e.preventDefault();
+                        addFrame();
+                    }
+                    if (e.key === "o" || e.key === "O") {
+                        e.preventDefault();
+                        toggleOnionSkin();
+                    }
+                    if (e.key === "x" || e.key === "X") {
+                        e.preventDefault();
+                        clearFrame();
+                    }
+                    if (e.key === "Backspace") {
+                        e.preventDefault();
+                        if (!state.isPlaying && state.frames.length > 1) {
+                            deleteFrame(state.currentFrameIndex);
+                        }
+                    }
+                    if (e.key === "ArrowLeft") {
+                        e.preventDefault();
+                        if (!state.isPlaying && state.currentFrameIndex > 0) {
+                            selectFrame(state.currentFrameIndex - 1);
+                        }
+                    }
+                    if (e.key === "ArrowRight") {
+                        e.preventDefault();
+                        if (
+                            !state.isPlaying &&
+                            state.currentFrameIndex < state.frames.length - 1
+                        ) {
+                            selectFrame(state.currentFrameIndex + 1);
+                        }
+                    }
+                }
+            });
+
+            // ═══════════════════════════════════════════════════════════════
+            //  Stroke helpers
+            // ═══════════════════════════════════════════════════════════════
+            function commitStroke(stroke) {
+                const idx = state.currentFrameIndex;
+                // Save snapshot before mutating
+                state.undoStack.push({
+                    frameIndex: idx,
+                    strokes: [...state.frames[idx].strokes],
+                });
+                state.frames[idx].strokes.push(stroke);
+                updateUndoBtn();
+            }
+
+            function undo() {
+                // Cancel any in-progress drawing first
+                if (state.isDrawing || state.polylineActive) {
+                    state.isDrawing = false;
+                    state.currentStroke = null;
+                    state.previewStroke = null;
+                    cancelPolyline();
+                    return;
+                }
+                if (!state.undoStack.length) return;
+                const snapshot = state.undoStack.pop();
+                state.frames[snapshot.frameIndex].strokes = snapshot.strokes;
+                updateUndoBtn();
+            }
+
+            function clearFrame() {
+                const idx = state.currentFrameIndex;
+                if (!state.frames[idx].strokes.length) return;
+                state.undoStack.push({
+                    frameIndex: idx,
+                    strokes: [...state.frames[idx].strokes],
+                });
+                state.frames[idx].strokes = [];
+                updateUndoBtn();
+            }
+
+            function updateUndoBtn() {
+                document.getElementById("undo-btn").disabled =
+                    state.undoStack.length === 0;
+            }
+
+            document.getElementById("undo-btn").addEventListener("click", undo);
+            document
+                .getElementById("clear-btn")
+                .addEventListener("click", clearFrame);
+            function toggleOnionSkin() {
+                state.onionSkin = !state.onionSkin;
+                const btn = document.getElementById("onion-btn");
+                btn.classList.toggle("active", state.onionSkin);
+                if (!state.onionSkin) {
+                    btn.classList.add("force-inactive");
+                    btn.addEventListener("mouseleave", () => btn.classList.remove("force-inactive"), { once: true });
+                }
+            }
+
+            document
+                .getElementById("onion-btn")
+                .addEventListener("click", () => toggleOnionSkin());
+
+            function finishPolyline() {
+                if (state.polylinePoints.length >= 2) {
+                    commitStroke({ points: [...state.polylinePoints] });
+                }
+                cancelPolyline();
+            }
+
+            function cancelPolyline() {
+                state.polylineActive = false;
+                state.polylinePoints = [];
+                state.previewStroke = null;
+                const badge = document.getElementById("mode-badge");
+                if (badge) badge.classList.remove("on");
+            }
+
+            // ═══════════════════════════════════════════════════════════════
+            //  Playback
+            // ═══════════════════════════════════════════════════════════════
+            function togglePlay() {
+                state.isPlaying = !state.isPlaying;
+                state.frameTimer = 0;
+                const btn = document.getElementById("play-btn");
+                btn.textContent = state.isPlaying ? "⏸" : "▶";
+                btn.classList.toggle("playing", state.isPlaying);
+                canvas.style.cursor = state.isPlaying ? "default" : "crosshair";
+
+                // Cancel any active drawing/polyline when play starts
+                if (state.isPlaying) {
+                    if (state.polylineActive) cancelPolyline();
+                    state.isDrawing = false;
+                    state.currentStroke = null;
+                    state.previewStroke = null;
+                }
+            }
+            document
+                .getElementById("play-btn")
+                .addEventListener("click", togglePlay);
+
+            // ═══════════════════════════════════════════════════════════════
+            //  Toolbar controls
+            // ═══════════════════════════════════════════════════════════════
+
+            // FPS (number input only)
+            const fpsNum = document.getElementById("fps-num");
+            fpsNum.addEventListener("change", () => {
+                state.fps = Math.max(
+                    1,
+                    Math.min(24, parseInt(fpsNum.value) || 12),
+                );
+                fpsNum.value = state.fps;
+            });
+            fpsNum.addEventListener("focus", () => fpsNum.select());
+
+            // Reference image — single toggle button
+            document
+                .getElementById("ref-toggle-btn")
+                .addEventListener("click", () => {
+                    if (state.referenceImage) {
+                        state.referenceImage = null;
+                        document.getElementById("ref-file").value = "";
+                        document.getElementById("ref-toggle-btn").textContent =
+                            "Upload Image";
+                        document.getElementById(
+                            "ref-opacity-label",
+                        ).style.display = "none";
+                        document.getElementById(
+                            "ref-opacity-slider",
+                        ).style.display = "none";
+                    } else {
+                        document.getElementById("ref-file").click();
+                    }
+                });
+            document
+                .getElementById("ref-file")
+                .addEventListener("change", (e) => {
+                    const file = e.target.files[0];
+                    if (!file) return;
+                    const img = new Image();
+                    img.onload = () => {
+                        state.referenceImage = img;
+                        document.getElementById("ref-toggle-btn").textContent =
+                            "Clear Image";
+                        document.getElementById(
+                            "ref-opacity-label",
+                        ).style.display = "";
+                        document.getElementById(
+                            "ref-opacity-slider",
+                        ).style.display = "";
+                    };
+                    img.src = URL.createObjectURL(file);
+                });
+            document
+                .getElementById("ref-opacity-slider")
+                .addEventListener("input", (e) => {
+                    state.refOpacity = parseInt(e.target.value) / 100;
+                });
+
+            // ═══════════════════════════════════════════════════════════════
+            //  Export (PNG sequence as ZIP)
+            // ═══════════════════════════════════════════════════════════════
+
+            function crc32(buf) {
+                let c = 0xffffffff;
+                for (let i = 0; i < buf.length; i++) {
+                    c ^= buf[i];
+                    for (let j = 0; j < 8; j++)
+                        c = c & 1 ? (c >>> 1) ^ 0xedb88320 : c >>> 1;
+                }
+                return (c ^ 0xffffffff) >>> 0;
+            }
+
+            function buildZip(files) {
+                const enc = new TextEncoder();
+                const parts = [],
+                    dirs = [];
+                let off = 0;
+                for (const f of files) {
+                    const name = enc.encode(f.name);
+                    const crc = crc32(f.data),
+                        size = f.data.length;
+                    const lh = new DataView(new ArrayBuffer(30 + name.length));
+                    lh.setUint32(0, 0x04034b50, true);
+                    lh.setUint16(4, 20, true);
+                    lh.setUint16(6, 0, true);
+                    lh.setUint16(8, 0, true);
+                    lh.setUint16(10, 0, true);
+                    lh.setUint16(12, 0, true);
+                    lh.setUint32(14, crc, true);
+                    lh.setUint32(18, size, true);
+                    lh.setUint32(22, size, true);
+                    lh.setUint16(26, name.length, true);
+                    lh.setUint16(28, 0, true);
+                    new Uint8Array(lh.buffer).set(name, 30);
+                    parts.push(new Uint8Array(lh.buffer), f.data);
+                    dirs.push({ name, crc, size, off });
+                    off += 30 + name.length + size;
+                }
+                const cdStart = off;
+                for (const d of dirs) {
+                    const cd = new DataView(
+                        new ArrayBuffer(46 + d.name.length),
+                    );
+                    cd.setUint32(0, 0x02014b50, true);
+                    cd.setUint16(4, 20, true);
+                    cd.setUint16(6, 20, true);
+                    cd.setUint16(8, 0, true);
+                    cd.setUint16(10, 0, true);
+                    cd.setUint16(12, 0, true);
+                    cd.setUint16(14, 0, true);
+                    cd.setUint32(16, d.crc, true);
+                    cd.setUint32(20, d.size, true);
+                    cd.setUint32(24, d.size, true);
+                    cd.setUint16(28, d.name.length, true);
+                    cd.setUint16(30, 0, true);
+                    cd.setUint16(32, 0, true);
+                    cd.setUint16(34, 0, true);
+                    cd.setUint16(36, 0, true);
+                    cd.setUint32(38, 0, true);
+                    cd.setUint32(42, d.off, true);
+                    new Uint8Array(cd.buffer).set(d.name, 46);
+                    parts.push(new Uint8Array(cd.buffer));
+                    off += 46 + d.name.length;
+                }
+                const eocd = new DataView(new ArrayBuffer(22));
+                eocd.setUint32(0, 0x06054b50, true);
+                eocd.setUint16(4, 0, true);
+                eocd.setUint16(6, 0, true);
+                eocd.setUint16(8, dirs.length, true);
+                eocd.setUint16(10, dirs.length, true);
+                eocd.setUint32(12, off - cdStart, true);
+                eocd.setUint32(16, cdStart, true);
+                eocd.setUint16(20, 0, true);
+                parts.push(new Uint8Array(eocd.buffer));
+                const total = parts.reduce((s, p) => s + p.length, 0);
+                const zip = new Uint8Array(total);
+                let pos = 0;
+                for (const p of parts) {
+                    zip.set(p, pos);
+                    pos += p.length;
+                }
+                return zip;
+            }
+
+            async function exportFrames() {
+                const btn = document.getElementById("export-btn");
+                btn.disabled = true;
+                btn.textContent = "Exporting…";
+                try {
+                    // Output size: reference image native size, or 1920×1080
+                    const expW = state.referenceImage
+                        ? state.referenceImage.width
+                        : 1920;
+                    const expH = state.referenceImage
+                        ? state.referenceImage.height
+                        : 1080;
+                    const sX = expW / canvas.width;
+                    const sY = expH / canvas.height;
+
+                    // Export at ANT_FPS (24 fps). For each drawn frame, emit (ANT_FPS / appFPS) sub-frames
+                    // so the ant animation marches smoothly in the exported sequence.
+                    const appFPS = state.fps;
+                    const numDrawn = state.frames.length;
+                    const totalFrames = Math.round(
+                        (numDrawn * ANT_FPS) / appFPS,
+                    );
+
+                    const files = [];
+                    for (let k = 0; k < totalFrames; k++) {
+                        const drawnIdx = Math.min(
+                            Math.floor((k * appFPS) / ANT_FPS),
+                            numDrawn - 1,
+                        );
+                        const dashOff = (state.antSpeed * k) / ANT_FPS;
+
+                        const c = document.createElement("canvas");
+                        c.width = expW;
+                        c.height = expH;
+                        const cx = c.getContext("2d");
+                        // Transparent background — no fillRect, no reference image
+
+                        const imageData = cx.getImageData(0, 0, expW, expH);
+                        renderStrokesBresenham(imageData, {
+                            frameIndex: drawnIdx,
+                            includeInProgress: false,
+                            dashOffset: dashOff,
+                            scaleX: sX,
+                            scaleY: sY,
+                        });
+                        cx.putImageData(imageData, 0, 0);
+
+                        const blob = await new Promise((res) =>
+                            c.toBlob(res, "image/png"),
+                        );
+                        const ab = await blob.arrayBuffer();
+                        files.push({
+                            name: `frame_${String(k + 1).padStart(4, "0")}.png`,
+                            data: new Uint8Array(ab),
+                        });
+                        btn.textContent = `${k + 1} / ${totalFrames}`;
+                    }
+
+                    const zip = buildZip(files);
+                    const a = document.createElement("a");
+                    a.href = URL.createObjectURL(
+                        new Blob([zip], { type: "application/zip" }),
+                    );
+                    a.download = "marching-ants-frames.zip";
+                    a.click();
+                    setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+                } finally {
+                    btn.disabled = false;
+                    btn.textContent = "Export";
+                }
+            }
+
+            document
+                .getElementById("export-btn")
+                .addEventListener("click", exportFrames);
+
+            // ═══════════════════════════════════════════════════════════════
+            //  Frame strip
+            // ═══════════════════════════════════════════════════════════════
+
+            function highlightActiveFrame() {
+                document.querySelectorAll(".frame-tab").forEach((el) => {
+                    el.classList.toggle(
+                        "active",
+                        parseInt(el.dataset.idx) === state.currentFrameIndex,
+                    );
+                });
+            }
+
+            function buildStrip() {
+                const bar = document.getElementById("bottom-bar");
+                const addBtn = document.getElementById("add-frame-btn");
+
+                // Remove existing frame tabs
+                bar.querySelectorAll(".frame-tab").forEach((el) => el.remove());
+
+                state.frames.forEach((frame, i) => {
+                    const tab = document.createElement("button");
+                    tab.className =
+                        "frame-tab" +
+                        (i === state.currentFrameIndex ? " active" : "");
+                    tab.dataset.idx = i;
+                    tab.title = `Frame ${i + 1}`;
+
+                    const num = document.createElement("span");
+                    num.textContent = i + 1;
+
+                    const del = document.createElement("span");
+                    del.className = "tab-del";
+                    del.textContent = "×";
+                    del.title = "Delete frame";
+                    del.addEventListener("click", (e) => {
+                        e.stopPropagation();
+                        if (state.frames.length > 1) deleteFrame(i);
+                    });
+
+                    tab.appendChild(num);
+                    if (state.frames.length > 1) tab.appendChild(del);
+                    tab.addEventListener("click", () => {
+                        if (!state.isPlaying) selectFrame(i);
+                    });
+
+                    bar.insertBefore(tab, addBtn);
+                });
+
+                addBtn.disabled = state.frames.length >= 24;
+            }
+
+            function selectFrame(i) {
+                state.currentFrameIndex = i;
+                highlightActiveFrame();
+            }
+
+            function addFrame() {
+                if (state.frames.length >= 24) return;
+                state.frames.push({ strokes: [] });
+                state.currentFrameIndex = state.frames.length - 1;
+                buildStrip();
+            }
+
+            function deleteFrame(i) {
+                if (state.frames.length <= 1) return;
+                state.frames.splice(i, 1);
+                if (state.currentFrameIndex >= state.frames.length) {
+                    state.currentFrameIndex = state.frames.length - 1;
+                }
+                buildStrip();
+            }
+
+            document
+                .getElementById("add-frame-btn")
+                .addEventListener("click", addFrame);
+
+            // ═══════════════════════════════════════════════════════════════
+            //  Init
+            // ═══════════════════════════════════════════════════════════════
+            buildStrip();
+        </script>
+    </body>
+</html>
