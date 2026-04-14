@@ -692,8 +692,6 @@
             function updateCursor() {
                 if (state.isPlaying) {
                     canvas.style.cursor = 'url("cursors/cursor_playing.svg") 16 16, default';
-                } else if (state.panMode) {
-                    canvas.style.cursor = state.isPanning ? 'grabbing' : 'grab';
                 } else if (state.ellipseMode) {
                     canvas.style.cursor = 'url("cursors/cursor_circle.svg") 16 16, crosshair';
                 } else if (state.rectMode) {
@@ -716,14 +714,6 @@
                 e.preventDefault();
 
                 const pos = getPos(e);
-
-                // ── Pan mode: start translating strokes ───────────────────────
-                if (state.panMode) {
-                    state.isPanning = true;
-                    state.panLastPos = { ...pos };
-                    updateCursor();
-                    return;
-                }
 
                 // ── Polyline mode: add anchor (or snap-to-close) ─────────────
                 if (state.polylineActive) {
@@ -791,9 +781,11 @@
                 state.lastMousePos = { ...pos };
 
                 // Pan: accumulate canvas-space delta for live preview
-                if (state.isPanning && state.panLastPos) {
-                    state.panOffset.x += pos.x - state.panLastPos.x;
-                    state.panOffset.y += pos.y - state.panLastPos.y;
+                if (state.isPanning) {
+                    if (state.panLastPos) {
+                        state.panOffset.x += pos.x - state.panLastPos.x;
+                        state.panOffset.y += pos.y - state.panLastPos.y;
+                    }
                     state.panLastPos = { ...pos };
                     return;
                 }
@@ -836,20 +828,13 @@
                 }
             });
 
-            // Stop panning even if mouse is released outside the canvas
-            document.addEventListener("mouseup", (e) => {
-                if (e.button !== 0 || !state.isPanning) return;
-                state.isPanning = false;
-                state.panLastPos = null;
-
-                // Commit the live offset into the actual stroke points
+            // Helper: commit panOffset to stroke points and push undo entry
+            function commitPan() {
                 const dx = Math.round(state.panOffset.x);
                 const dy = Math.round(state.panOffset.y);
                 state.panOffset = { x: 0, y: 0 };
-
                 if (dx !== 0 || dy !== 0) {
                     const idx = state.currentFrameIndex;
-                    // Deep-clone points for undo (pan mutates in place)
                     state.undoStack.push({
                         frameIndex: idx,
                         strokes: state.frames[idx].strokes.map(s => ({
@@ -860,8 +845,7 @@
                         for (const pt of stroke.points) { pt.x += dx; pt.y += dy; }
                     updateUndoBtn();
                 }
-                updateCursor();
-            });
+            }
 
             canvas.addEventListener("mouseup", (e) => {
                 if (e.button !== 0 || !state.isDrawing) return;
@@ -926,12 +910,6 @@
                 const inInput = e.target.tagName === "INPUT" && e.target.type !== "range";
 
                 if (e.key === "Escape") {
-                    if (state.panMode) {
-                        state.panMode = false;
-                        state.isPanning = false;
-                        state.panLastPos = null;
-                        updateCursor();
-                    }
                     if (state.polylineActive) {
                         state.previewStroke = null; // discard cursor-preview segment before finalising
                         finishPolyline(); // commit only the placed anchors
@@ -966,13 +944,11 @@
                 if (!inInput && !e.ctrlKey && !e.metaKey && !e.altKey) {
                     if (e.key === "g" || e.key === "G") {
                         e.preventDefault();
-                        if (state.polylineActive) { state.previewStroke = null; finishPolyline(); }
-                        state.ellipseMode = false;
-                        state.rectMode = false;
-                        state.previewStroke = null;
-                        state.panMode = !state.panMode;
-                        if (!state.panMode) { state.isPanning = false; state.panLastPos = null; }
-                        updateCursor();
+                        if (!state.panMode) {
+                            state.panMode = true;
+                            state.isPanning = true;
+                            state.panLastPos = state.lastMousePos ? { ...state.lastMousePos } : null;
+                        }
                     }
                     if (e.key === "d" || e.key === "D") {
                         e.preventDefault();
@@ -1001,7 +977,6 @@
                     if (e.key === "c" || e.key === "C") {
                         e.preventDefault();
                         if (state.polylineActive) { state.previewStroke = null; finishPolyline(); }
-                        state.panMode = false;
                         state.ellipseMode = !state.ellipseMode;
                         state.rectMode = false;
                         if (!state.ellipseMode) state.previewStroke = null;
@@ -1010,7 +985,6 @@
                     if (e.key === "r" || e.key === "R") {
                         e.preventDefault();
                         if (state.polylineActive) { state.previewStroke = null; finishPolyline(); }
-                        state.panMode = false;
                         state.rectMode = !state.rectMode;
                         state.ellipseMode = false;
                         if (!state.rectMode) state.previewStroke = null;
@@ -1056,6 +1030,13 @@
                 if (e.code === "Space") {
                     state.spaceRepositioning = false;
                     state.spaceRepoLastPos = null;
+                }
+                if (e.key === "g" || e.key === "G") {
+                    if (!state.panMode) return;
+                    state.panMode = false;
+                    state.isPanning = false;
+                    state.panLastPos = null;
+                    commitPan();
                 }
             });
 
