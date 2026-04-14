@@ -426,7 +426,7 @@
                 // Pass 1 — black dashes
                 c.strokeStyle = "#000000";
                 c.setLineDash([dL, gL]);
-                c.lineDashOffset = -dashOffset;
+                c.lineDashOffset = dashOffset;
                 c.beginPath();
                 c.moveTo(stroke.points[0].x, stroke.points[0].y);
                 for (let i = 1; i < stroke.points.length; i++)
@@ -436,7 +436,7 @@
                 // Pass 2 — white dashes filling the gaps exactly
                 c.strokeStyle = "#ffffff";
                 c.setLineDash([gL, dL]);
-                c.lineDashOffset = -(dashOffset + dL);
+                c.lineDashOffset = dashOffset + dL;
                 c.beginPath();
                 c.moveTo(stroke.points[0].x, stroke.points[0].y);
                 for (let i = 1; i < stroke.points.length; i++)
@@ -699,8 +699,15 @@
 
                 const pos = getPos(e);
 
-                // ── Polyline mode: add anchor ────────────────────────────────
+                // ── Polyline mode: add anchor (or snap-to-close) ─────────────
                 if (state.polylineActive) {
+                    if (nearPolyStart(pos)) {
+                        // Close the shape: draw back to first anchor and commit
+                        state.polylinePoints.push({ ...state.polylinePoints[0] });
+                        state.previewStroke = null;
+                        commitPolyline(); // commits closed shape, stays in polyline mode
+                        return;
+                    }
                     state.polylinePoints.push({ ...pos });
                     return;
                 }
@@ -736,13 +743,34 @@
                 state.currentStroke = { points: [{ ...pos }] };
             });
 
+            // Returns the snap radius in canvas-space pixels (≈ 25 screen pixels).
+            function polySnapRadius() {
+                const r = canvas.getBoundingClientRect();
+                return 25 * (canvas.width / r.width);
+            }
+
+            // True when pos is within snap distance of the first polyline anchor
+            // (requires ≥ 3 placed points so we can form a real closed shape).
+            function nearPolyStart(pos) {
+                if (state.polylinePoints.length < 3) return false;
+                const first = state.polylinePoints[0];
+                const sr = polySnapRadius();
+                const dx = pos.x - first.x;
+                const dy = pos.y - first.y;
+                return dx * dx + dy * dy <= sr * sr;
+            }
+
             canvas.addEventListener("mousemove", (e) => {
                 const pos = getPos(e);
 
                 if (state.polylineActive) {
                     if (state.polylinePoints.length > 0) {
                         const last = state.polylinePoints[state.polylinePoints.length - 1];
-                        state.previewStroke = { points: [{ ...last }, { ...pos }] };
+                        // Snap preview endpoint to first point when cursor is close
+                        const snapPos = nearPolyStart(pos)
+                            ? { ...state.polylinePoints[0] }
+                            : { ...pos };
+                        state.previewStroke = { points: [{ ...last }, snapPos] };
                     }
                     return;
                 }
