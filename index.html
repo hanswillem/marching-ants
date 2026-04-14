@@ -720,19 +720,6 @@
                     return;
                 }
 
-                // ── CTRL / CMD: enter polyline mode ──────────────────────────
-                if (e.ctrlKey || e.metaKey) {
-                    state.polylineActive = true;
-                    state.polylinePoints = [{ ...pos }];
-                    state.previewStroke = { points: [{ ...pos }, { ...pos }] };
-                    document.getElementById("mode-badge") &&
-                        document
-                            .getElementById("mode-badge")
-                            .classList.add("on");
-                    updateCursor();
-                    return;
-                }
-
                 // ── SHIFT: straight-line mode ─────────────────────────────────
                 if (e.shiftKey) {
                     state.isDrawing = true;
@@ -752,9 +739,10 @@
                 const pos = getPos(e);
 
                 if (state.polylineActive) {
-                    const last =
-                        state.polylinePoints[state.polylinePoints.length - 1];
-                    state.previewStroke = { points: [{ ...last }, { ...pos }] };
+                    if (state.polylinePoints.length > 0) {
+                        const last = state.polylinePoints[state.polylinePoints.length - 1];
+                        state.previewStroke = { points: [{ ...last }, { ...pos }] };
+                    }
                     return;
                 }
 
@@ -858,8 +846,23 @@
                     undo();
                 }
                 if (!inInput && !e.ctrlKey && !e.metaKey && !e.altKey) {
+                    if (e.key === "p" || e.key === "P") {
+                        e.preventDefault();
+                        if (state.polylineActive) {
+                            state.previewStroke = null;
+                            finishPolyline(); // also calls cancelPolyline → updateCursor
+                        } else {
+                            state.ellipseMode = false;
+                            state.rectMode = false;
+                            state.previewStroke = null;
+                            state.polylineActive = true;
+                            state.polylinePoints = [];
+                            updateCursor();
+                        }
+                    }
                     if (e.key === "c" || e.key === "C") {
                         e.preventDefault();
+                        if (state.polylineActive) { state.previewStroke = null; finishPolyline(); }
                         state.ellipseMode = !state.ellipseMode;
                         state.rectMode = false;
                         if (!state.ellipseMode) state.previewStroke = null;
@@ -867,6 +870,7 @@
                     }
                     if (e.key === "r" || e.key === "R") {
                         e.preventDefault();
+                        if (state.polylineActive) { state.previewStroke = null; finishPolyline(); }
                         state.rectMode = !state.rectMode;
                         state.ellipseMode = false;
                         if (!state.rectMode) state.previewStroke = null;
