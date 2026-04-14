@@ -372,6 +372,10 @@
                 polylineActive: false,
                 polylinePoints: [],
 
+                // Shape modes
+                ellipseMode: false,
+                rectMode: false,
+
                 // Onion skinning
                 onionSkin: false,
 
@@ -451,7 +455,7 @@
                 c.lineCap = "butt";
                 c.lineJoin = "round";
                 c.setLineDash([state.dashLength, state.gapLength]);
-                c.lineDashOffset = -state.dashOffset;
+                c.lineDashOffset = state.dashOffset;
                 c.strokeStyle = color;
                 for (const stroke of strokes) {
                     if (stroke.points.length < 2) continue;
@@ -682,6 +686,22 @@
                     return;
                 }
 
+                // ── Ellipse mode (C) ─────────────────────────────────────────
+                if (state.ellipseMode) {
+                    state.isDrawing = true;
+                    state.drawMode = "ellipse";
+                    state.mouseDownPos = { ...pos };
+                    return;
+                }
+
+                // ── Rect mode (R) ─────────────────────────────────────────────
+                if (state.rectMode) {
+                    state.isDrawing = true;
+                    state.drawMode = "rect";
+                    state.mouseDownPos = { ...pos };
+                    return;
+                }
+
                 // ── CTRL / CMD: enter polyline mode ──────────────────────────
                 if (e.ctrlKey || e.metaKey) {
                     state.polylineActive = true;
@@ -727,6 +747,12 @@
                     state.previewStroke = {
                         points: [{ ...state.mouseDownPos }, { ...pos }],
                     };
+                } else if (state.drawMode === "ellipse") {
+                    const pts = ellipsePoints(state.mouseDownPos, pos, e.shiftKey);
+                    state.previewStroke = pts.length ? { points: pts } : null;
+                } else if (state.drawMode === "rect") {
+                    const pts = rectPoints(state.mouseDownPos, pos, e.shiftKey);
+                    state.previewStroke = pts.length ? { points: pts } : null;
                 }
             });
 
@@ -753,6 +779,12 @@
                         });
                     }
                     state.previewStroke = null;
+                } else if (state.drawMode === "ellipse" || state.drawMode === "rect") {
+                    const p = state.previewStroke;
+                    if (p && p.points.length >= 2) {
+                        commitStroke({ points: [...p.points] });
+                    }
+                    state.previewStroke = null;
                 }
 
                 state.isDrawing = false;
@@ -760,11 +792,15 @@
                 state.mouseDownPos = null;
             });
 
-            // dblclick commits polyline
+            // dblclick commits polyline and closes it back to the first point
             canvas.addEventListener("dblclick", (e) => {
                 if (!state.polylineActive) return;
                 // Second mousedown of dblclick pushed an extra point — remove it
                 if (state.polylinePoints.length > 1) state.polylinePoints.pop();
+                // Close the shape: connect last point back to first
+                if (state.polylinePoints.length >= 3) {
+                    state.polylinePoints.push({ ...state.polylinePoints[0] });
+                }
                 finishPolyline();
             });
 
@@ -785,9 +821,15 @@
                         state.isDrawing = false;
                         state.currentStroke = null;
                         state.previewStroke = null;
+                        state.drawMode = "freehand";
+                    }
+                    if (state.ellipseMode || state.rectMode) {
+                        state.ellipseMode = false;
+                        state.rectMode = false;
+                        state.previewStroke = null;
                     }
                 }
-                if (e.code === "Space" && e.target === document.body) {
+                if (e.code === "Space" && !inInput) {
                     e.preventDefault();
                     togglePlay();
                 }
@@ -796,6 +838,18 @@
                     undo();
                 }
                 if (!inInput && !e.ctrlKey && !e.metaKey && !e.altKey) {
+                    if (e.key === "c" || e.key === "C") {
+                        e.preventDefault();
+                        state.ellipseMode = !state.ellipseMode;
+                        state.rectMode = false;
+                        if (!state.ellipseMode) state.previewStroke = null;
+                    }
+                    if (e.key === "r" || e.key === "R") {
+                        e.preventDefault();
+                        state.rectMode = !state.rectMode;
+                        state.ellipseMode = false;
+                        if (!state.rectMode) state.previewStroke = null;
+                    }
                     if (e.key === "f" || e.key === "F") {
                         e.preventDefault();
                         addFrame();
@@ -835,6 +889,43 @@
             // ═══════════════════════════════════════════════════════════════
             //  Stroke helpers
             // ═══════════════════════════════════════════════════════════════
+            // ═══════════════════════════════════════════════════════════════
+            //  Shape helpers
+            // ═══════════════════════════════════════════════════════════════
+            function ellipsePoints(p0, p1, constrain) {
+                let rx = Math.abs(p1.x - p0.x) / 2;
+                let ry = Math.abs(p1.y - p0.y) / 2;
+                if (constrain) { const r = Math.min(rx, ry); rx = r; ry = r; }
+                if (rx < 1 || ry < 1) return [];
+                const cx = (p0.x + p1.x) / 2;
+                const cy = (p0.y + p1.y) / 2;
+                const N = 64;
+                const pts = [];
+                for (let i = 0; i <= N; i++) {
+                    const a = (i / N) * Math.PI * 2;
+                    pts.push({ x: cx + Math.cos(a) * rx, y: cy + Math.sin(a) * ry });
+                }
+                return pts;
+            }
+
+            function rectPoints(p0, p1, constrain) {
+                let w = p1.x - p0.x;
+                let h = p1.y - p0.y;
+                if (constrain) {
+                    const side = Math.min(Math.abs(w), Math.abs(h));
+                    w = Math.sign(w) * side;
+                    h = Math.sign(h) * side;
+                }
+                if (Math.abs(w) < 1 || Math.abs(h) < 1) return [];
+                const x0 = p0.x, y0 = p0.y;
+                const x1 = p0.x + w, y1 = p0.y + h;
+                return [
+                    { x: x0, y: y0 }, { x: x1, y: y0 },
+                    { x: x1, y: y1 }, { x: x0, y: y1 },
+                    { x: x0, y: y0 },
+                ];
+            }
+
             function commitStroke(stroke) {
                 const idx = state.currentFrameIndex;
                 // Save snapshot before mutating
@@ -1153,6 +1244,28 @@
             document
                 .getElementById("export-btn")
                 .addEventListener("click", exportFrames);
+
+            // ── Drag-and-drop image onto canvas area ─────────────────────
+            function loadImageFile(file) {
+                if (!file || !file.type.startsWith("image/")) return;
+                const img = new Image();
+                img.onload = () => {
+                    state.referenceImage = img;
+                    document.getElementById("ref-toggle-btn").textContent = "Clear Image";
+                    document.getElementById("ref-opacity-label").style.display = "";
+                    document.getElementById("ref-opacity-slider").style.display = "";
+                };
+                img.src = URL.createObjectURL(file);
+            }
+            const canvasArea = document.getElementById("canvas-area");
+            canvasArea.addEventListener("dragover", (e) => {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = "copy";
+            });
+            canvasArea.addEventListener("drop", (e) => {
+                e.preventDefault();
+                loadImageFile(e.dataTransfer.files[0]);
+            });
 
             // ═══════════════════════════════════════════════════════════════
             //  Frame strip
