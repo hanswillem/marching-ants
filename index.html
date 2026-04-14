@@ -670,6 +670,24 @@
             requestAnimationFrame(loop);
 
             // ═══════════════════════════════════════════════════════════════
+            //  Cursor management
+            // ═══════════════════════════════════════════════════════════════
+            function updateCursor() {
+                if (state.isPlaying) {
+                    canvas.style.cursor = "default";
+                } else if (state.ellipseMode) {
+                    canvas.style.cursor = 'url("cursors/cursor_circle.svg") 32 32, crosshair';
+                } else if (state.rectMode) {
+                    canvas.style.cursor = 'url("cursors/cursor_rectangle.svg") 32 32, crosshair';
+                } else if (state.polylineActive) {
+                    canvas.style.cursor = 'url("cursors/cursor_polyline.svg") 32 32, crosshair';
+                } else {
+                    canvas.style.cursor = 'url("cursors/cursor_regular.svg") 32 32, crosshair';
+                }
+            }
+            updateCursor();
+
+            // ═══════════════════════════════════════════════════════════════
             //  Mouse events
             // ═══════════════════════════════════════════════════════════════
 
@@ -711,6 +729,7 @@
                         document
                             .getElementById("mode-badge")
                             .classList.add("on");
+                    updateCursor();
                     return;
                 }
 
@@ -827,6 +846,7 @@
                         state.ellipseMode = false;
                         state.rectMode = false;
                         state.previewStroke = null;
+                        updateCursor();
                     }
                 }
                 if (e.code === "Space" && !inInput) {
@@ -843,12 +863,14 @@
                         state.ellipseMode = !state.ellipseMode;
                         state.rectMode = false;
                         if (!state.ellipseMode) state.previewStroke = null;
+                        updateCursor();
                     }
                     if (e.key === "r" || e.key === "R") {
                         e.preventDefault();
                         state.rectMode = !state.rectMode;
                         state.ellipseMode = false;
                         if (!state.rectMode) state.previewStroke = null;
+                        updateCursor();
                     }
                     if (e.key === "f" || e.key === "F") {
                         e.preventDefault();
@@ -999,6 +1021,7 @@
                 state.previewStroke = null;
                 const badge = document.getElementById("mode-badge");
                 if (badge) badge.classList.remove("on");
+                updateCursor();
             }
 
             // ═══════════════════════════════════════════════════════════════
@@ -1010,7 +1033,7 @@
                 const btn = document.getElementById("play-btn");
                 btn.textContent = state.isPlaying ? "⏸" : "▶";
                 btn.classList.toggle("playing", state.isPlaying);
-                canvas.style.cursor = state.isPlaying ? "default" : "crosshair";
+                updateCursor();
 
                 // Cancel any active drawing/polyline when play starts
                 if (state.isPlaying) {
