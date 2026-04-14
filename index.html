@@ -385,6 +385,11 @@
                 spaceRepoLastPos: null,
                 lastMousePos: null,
 
+                // Pan mode (G key)
+                panMode: false,
+                isPanning: false,
+                panLastPos: null,
+
                 // Undo — stack of {frameIndex, strokes} snapshots
                 undoStack: [],
 
@@ -681,6 +686,8 @@
             function updateCursor() {
                 if (state.isPlaying) {
                     canvas.style.cursor = 'url("cursors/cursor_playing.svg") 16 16, default';
+                } else if (state.panMode) {
+                    canvas.style.cursor = state.isPanning ? 'grabbing' : 'grab';
                 } else if (state.ellipseMode) {
                     canvas.style.cursor = 'url("cursors/cursor_circle.svg") 16 16, crosshair';
                 } else if (state.rectMode) {
@@ -699,8 +706,16 @@
 
             canvas.addEventListener("mousedown", (e) => {
                 if (e.button !== 0) return;
-                if (state.isPlaying) return; // no drawing while playing
+                if (state.isPlaying) return;
                 e.preventDefault();
+
+                // ── Pan mode ─────────────────────────────────────────────────
+                if (state.panMode) {
+                    state.isPanning = true;
+                    state.panLastPos = { x: e.clientX, y: e.clientY };
+                    updateCursor();
+                    return;
+                }
 
                 const pos = getPos(e);
 
@@ -769,6 +784,15 @@
                 const pos = getPos(e);
                 state.lastMousePos = { ...pos };
 
+                // Pan: scroll canvas-area by screen-pixel delta
+                if (state.isPanning && state.panLastPos) {
+                    const area = document.getElementById("canvas-area");
+                    area.scrollLeft -= e.clientX - state.panLastPos.x;
+                    area.scrollTop  -= e.clientY - state.panLastPos.y;
+                    state.panLastPos = { x: e.clientX, y: e.clientY };
+                    return;
+                }
+
                 if (state.polylineActive) {
                     if (state.polylinePoints.length > 0) {
                         const last = state.polylinePoints[state.polylinePoints.length - 1];
@@ -805,6 +829,14 @@
                     const pts = rectPoints(state.mouseDownPos, pos, e.shiftKey);
                     state.previewStroke = pts.length ? { points: pts } : null;
                 }
+            });
+
+            // Stop panning even if mouse is released outside the canvas
+            document.addEventListener("mouseup", (e) => {
+                if (e.button !== 0 || !state.isPanning) return;
+                state.isPanning = false;
+                state.panLastPos = null;
+                updateCursor();
             });
 
             canvas.addEventListener("mouseup", (e) => {
@@ -870,6 +902,12 @@
                 const inInput = e.target.tagName === "INPUT" && e.target.type !== "range";
 
                 if (e.key === "Escape") {
+                    if (state.panMode) {
+                        state.panMode = false;
+                        state.isPanning = false;
+                        state.panLastPos = null;
+                        updateCursor();
+                    }
                     if (state.polylineActive) {
                         state.previewStroke = null; // discard cursor-preview segment before finalising
                         finishPolyline(); // commit only the placed anchors
@@ -902,9 +940,21 @@
                     undo();
                 }
                 if (!inInput && !e.ctrlKey && !e.metaKey && !e.altKey) {
+                    if (e.key === "g" || e.key === "G") {
+                        e.preventDefault();
+                        if (state.polylineActive) { state.previewStroke = null; finishPolyline(); }
+                        state.ellipseMode = false;
+                        state.rectMode = false;
+                        state.previewStroke = null;
+                        state.panMode = !state.panMode;
+                        if (!state.panMode) { state.isPanning = false; state.panLastPos = null; }
+                        updateCursor();
+                    }
                     if (e.key === "d" || e.key === "D") {
                         e.preventDefault();
                         if (state.polylineActive) { state.previewStroke = null; finishPolyline(); }
+                        state.panMode = false;
+                        state.isPanning = false;
                         state.ellipseMode = false;
                         state.rectMode = false;
                         state.previewStroke = null;
@@ -927,6 +977,7 @@
                     if (e.key === "c" || e.key === "C") {
                         e.preventDefault();
                         if (state.polylineActive) { state.previewStroke = null; finishPolyline(); }
+                        state.panMode = false;
                         state.ellipseMode = !state.ellipseMode;
                         state.rectMode = false;
                         if (!state.ellipseMode) state.previewStroke = null;
@@ -935,6 +986,7 @@
                     if (e.key === "r" || e.key === "R") {
                         e.preventDefault();
                         if (state.polylineActive) { state.previewStroke = null; finishPolyline(); }
+                        state.panMode = false;
                         state.rectMode = !state.rectMode;
                         state.ellipseMode = false;
                         if (!state.rectMode) state.previewStroke = null;
