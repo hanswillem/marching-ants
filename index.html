@@ -676,13 +676,13 @@
                 if (state.isPlaying) {
                     canvas.style.cursor = "default";
                 } else if (state.ellipseMode) {
-                    canvas.style.cursor = 'url("cursors/cursor_circle.svg") 32 32, crosshair';
+                    canvas.style.cursor = 'url("cursors/cursor_circle.svg") 16 16, crosshair';
                 } else if (state.rectMode) {
-                    canvas.style.cursor = 'url("cursors/cursor_rectangle.svg") 32 32, crosshair';
+                    canvas.style.cursor = 'url("cursors/cursor_rectangle.svg") 16 16, crosshair';
                 } else if (state.polylineActive) {
-                    canvas.style.cursor = 'url("cursors/cursor_polyline.svg") 32 32, crosshair';
+                    canvas.style.cursor = 'url("cursors/cursor_polyline.svg") 16 16, crosshair';
                 } else {
-                    canvas.style.cursor = 'url("cursors/cursor_regular.svg") 32 32, crosshair';
+                    canvas.style.cursor = 'url("cursors/cursor_regular.svg") 16 16, crosshair';
                 }
             }
             updateCursor();
