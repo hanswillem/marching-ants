@@ -1339,15 +1339,12 @@
                 btn.disabled = true;
                 btn.textContent = "Exporting…";
                 try {
-                    // Output size: reference image native size, or 1920×1080
-                    const expW = state.referenceImage
-                        ? state.referenceImage.width
-                        : 1920;
-                    const expH = state.referenceImage
-                        ? state.referenceImage.height
-                        : 1080;
-                    const sX = expW / canvas.width;
-                    const sY = expH / canvas.height;
+                    // Always export at the canvas's native resolution (1920×1080).
+                    // Reference images are display-only overlays and don't affect output size.
+                    const expW = canvas.width;
+                    const expH = canvas.height;
+                    const sX = 1;
+                    const sY = 1;
 
                     // Export at ANT_FPS (24 fps). For each drawn frame, emit (ANT_FPS / appFPS) sub-frames
                     // so the ant animation marches smoothly in the exported sequence.
