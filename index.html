@@ -804,6 +804,7 @@
                 if (!state.polylineActive) return;
                 // Second mousedown of dblclick pushed an extra point — remove it
                 if (state.polylinePoints.length > 1) state.polylinePoints.pop();
+                state.previewStroke = null; // cancel the in-progress preview segment
                 commitPolyline(); // commit as open path, stay in polyline mode
             });
 
