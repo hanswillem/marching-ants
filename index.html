@@ -823,7 +823,7 @@
             // Keyboard shortcuts
             document.addEventListener("keydown", (e) => {
                 // Don't fire shortcuts when typing in an input
-                const inInput = e.target.tagName === "INPUT";
+                const inInput = e.target.tagName === "INPUT" && e.target.type !== "range";
 
                 if (e.key === "Escape") {
                     if (state.polylineActive) {
