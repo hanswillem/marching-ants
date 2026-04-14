@@ -385,10 +385,11 @@
                 spaceRepoLastPos: null,
                 lastMousePos: null,
 
-                // Pan mode (G key)
+                // Pan mode (G key) — translate strokes within the canvas
                 panMode: false,
                 isPanning: false,
-                panLastPos: null,
+                panLastPos: null,   // canvas-space coords of last mousemove
+                panOffset: { x: 0, y: 0 }, // live preview offset while dragging
 
                 // Undo — stack of {frameIndex, strokes} snapshots
                 undoStack: [],
@@ -546,7 +547,7 @@
                 }
             }
 
-            // opts: { frameIndex, includeInProgress, dashOffset, scaleX, scaleY }
+            // opts: { frameIndex, includeInProgress, dashOffset, scaleX, scaleY, offsetX, offsetY }
             // All opts are optional and fall back to current state values.
             function renderStrokesBresenham(imageData, opts) {
                 const {
@@ -555,6 +556,8 @@
                     dashOffset: dOff = state.dashOffset,
                     scaleX = 1,
                     scaleY = 1,
+                    offsetX = 0,
+                    offsetY = 0,
                 } = opts || {};
 
                 const { data, width: W, height: H } = imageData;
@@ -570,10 +573,10 @@
                     for (let s = 0; s < points.length - 1; s++) {
                         const last = s === points.length - 2;
                         _bresenham(
-                            points[s].x * scaleX,
-                            points[s].y * scaleY,
-                            points[s + 1].x * scaleX,
-                            points[s + 1].y * scaleY,
+                            points[s].x * scaleX + offsetX,
+                            points[s].y * scaleY + offsetY,
+                            points[s + 1].x * scaleX + offsetX,
+                            points[s + 1].y * scaleY + offsetY,
                             (x, y, done) => {
                                 if (!last && done) return; // skip shared joint pixel
                                 const phase =
@@ -634,7 +637,10 @@
                     canvas.width,
                     canvas.height,
                 );
-                renderStrokesBresenham(imageData);
+                renderStrokesBresenham(imageData, {
+                    offsetX: state.panOffset.x,
+                    offsetY: state.panOffset.y,
+                });
                 ctx.putImageData(imageData, 0, 0);
 
                 // Preview stroke (Canvas path — anti-aliasing is acceptable for preview)
@@ -709,15 +715,15 @@
                 if (state.isPlaying) return;
                 e.preventDefault();
 
-                // ── Pan mode ─────────────────────────────────────────────────
+                const pos = getPos(e);
+
+                // ── Pan mode: start translating strokes ───────────────────────
                 if (state.panMode) {
                     state.isPanning = true;
-                    state.panLastPos = { x: e.clientX, y: e.clientY };
+                    state.panLastPos = { ...pos };
                     updateCursor();
                     return;
                 }
-
-                const pos = getPos(e);
 
                 // ── Polyline mode: add anchor (or snap-to-close) ─────────────
                 if (state.polylineActive) {
@@ -784,12 +790,11 @@
                 const pos = getPos(e);
                 state.lastMousePos = { ...pos };
 
-                // Pan: scroll canvas-area by screen-pixel delta
+                // Pan: accumulate canvas-space delta for live preview
                 if (state.isPanning && state.panLastPos) {
-                    const area = document.getElementById("canvas-area");
-                    area.scrollLeft -= e.clientX - state.panLastPos.x;
-                    area.scrollTop  -= e.clientY - state.panLastPos.y;
-                    state.panLastPos = { x: e.clientX, y: e.clientY };
+                    state.panOffset.x += pos.x - state.panLastPos.x;
+                    state.panOffset.y += pos.y - state.panLastPos.y;
+                    state.panLastPos = { ...pos };
                     return;
                 }
 
@@ -836,6 +841,25 @@
                 if (e.button !== 0 || !state.isPanning) return;
                 state.isPanning = false;
                 state.panLastPos = null;
+
+                // Commit the live offset into the actual stroke points
+                const dx = Math.round(state.panOffset.x);
+                const dy = Math.round(state.panOffset.y);
+                state.panOffset = { x: 0, y: 0 };
+
+                if (dx !== 0 || dy !== 0) {
+                    const idx = state.currentFrameIndex;
+                    // Deep-clone points for undo (pan mutates in place)
+                    state.undoStack.push({
+                        frameIndex: idx,
+                        strokes: state.frames[idx].strokes.map(s => ({
+                            points: s.points.map(p => ({ ...p })),
+                        })),
+                    });
+                    for (const stroke of state.frames[idx].strokes)
+                        for (const pt of stroke.points) { pt.x += dx; pt.y += dy; }
+                    updateUndoBtn();
+                }
                 updateCursor();
             });
 
