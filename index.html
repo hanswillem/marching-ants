@@ -674,7 +674,7 @@
             // ═══════════════════════════════════════════════════════════════
             function updateCursor() {
                 if (state.isPlaying) {
-                    canvas.style.cursor = "default";
+                    canvas.style.cursor = 'url("cursors/cursor_playing.svg") 16 16, default';
                 } else if (state.ellipseMode) {
                     canvas.style.cursor = 'url("cursors/cursor_circle.svg") 16 16, crosshair';
                 } else if (state.rectMode) {
