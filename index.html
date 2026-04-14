@@ -1048,6 +1048,9 @@
                 if (!state.onionSkin) {
                     btn.classList.add("force-inactive");
                     btn.addEventListener("mouseleave", () => btn.classList.remove("force-inactive"), { once: true });
+                } else {
+                    // Remove force-inactive in case it was left over from a keyboard toggle
+                    btn.classList.remove("force-inactive");
                 }
             }
 
