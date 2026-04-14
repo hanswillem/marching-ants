@@ -799,7 +799,7 @@
                 state.mouseDownPos = null;
             });
 
-            // dblclick commits polyline and closes it back to the first point
+            // dblclick commits polyline, closes it, and stays in polyline mode
             canvas.addEventListener("dblclick", (e) => {
                 if (!state.polylineActive) return;
                 // Second mousedown of dblclick pushed an extra point — remove it
@@ -808,7 +808,7 @@
                 if (state.polylinePoints.length >= 3) {
                     state.polylinePoints.push({ ...state.polylinePoints[0] });
                 }
-                finishPolyline();
+                commitPolyline(); // commit but stay in polyline mode
             });
 
             // Prevent context menu when Ctrl+clicking on canvas
@@ -1012,10 +1012,17 @@
                 .getElementById("onion-btn")
                 .addEventListener("click", () => toggleOnionSkin());
 
-            function finishPolyline() {
+            function commitPolyline() {
+                // Commit the current points but stay in polyline mode
                 if (state.polylinePoints.length >= 2) {
                     commitStroke({ points: [...state.polylinePoints] });
                 }
+                state.polylinePoints = [];
+                state.previewStroke = null;
+            }
+
+            function finishPolyline() {
+                commitPolyline();
                 cancelPolyline();
             }
 
