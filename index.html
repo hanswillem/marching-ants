@@ -380,6 +380,11 @@
                 // Onion skinning
                 onionSkin: false,
 
+                // Space-to-reposition (ellipse / rect only)
+                spaceRepositioning: false,
+                spaceRepoLastPos: null,
+                lastMousePos: null,
+
                 // Undo — stack of {frameIndex, strokes} snapshots
                 undoStack: [],
 
@@ -762,6 +767,7 @@
 
             canvas.addEventListener("mousemove", (e) => {
                 const pos = getPos(e);
+                state.lastMousePos = { ...pos };
 
                 if (state.polylineActive) {
                     if (state.polylinePoints.length > 0) {
@@ -776,6 +782,15 @@
                 }
 
                 if (!state.isDrawing) return;
+
+                // Space held: shift mouseDownPos by the mouse delta so shape moves
+                if (state.spaceRepositioning && state.spaceRepoLastPos && state.mouseDownPos) {
+                    const dx = pos.x - state.spaceRepoLastPos.x;
+                    const dy = pos.y - state.spaceRepoLastPos.y;
+                    state.mouseDownPos.x += dx;
+                    state.mouseDownPos.y += dy;
+                    state.spaceRepoLastPos = { ...pos };
+                }
 
                 if (state.drawMode === "freehand") {
                     state.currentStroke.points.push({ ...pos });
@@ -874,7 +889,13 @@
                 }
                 if (e.code === "Space" && !inInput) {
                     e.preventDefault();
-                    togglePlay();
+                    if (state.isDrawing && (state.drawMode === "ellipse" || state.drawMode === "rect")) {
+                        // Start repositioning the shape
+                        state.spaceRepositioning = true;
+                        state.spaceRepoLastPos = state.lastMousePos ? { ...state.lastMousePos } : null;
+                    } else {
+                        togglePlay();
+                    }
                 }
                 if ((e.ctrlKey || e.metaKey) && e.key === "z") {
                     e.preventDefault();
@@ -952,6 +973,13 @@
                             selectFrame(state.currentFrameIndex + 1);
                         }
                     }
+                }
+            });
+
+            document.addEventListener("keyup", (e) => {
+                if (e.code === "Space") {
+                    state.spaceRepositioning = false;
+                    state.spaceRepoLastPos = null;
                 }
             });
 
@@ -1268,9 +1296,11 @@
                     // so the ant animation marches smoothly in the exported sequence.
                     const appFPS = state.fps;
                     const numDrawn = state.frames.length;
-                    const totalFrames = Math.round(
-                        (numDrawn * ANT_FPS) / appFPS,
-                    );
+                    // Single frame: always export 8 frames (one full marching-ants loop).
+                    // Multi-frame: export enough sub-frames for the full animation at ANT_FPS.
+                    const totalFrames = numDrawn === 1
+                        ? 8
+                        : Math.round((numDrawn * ANT_FPS) / appFPS);
 
                     const files = [];
                     for (let k = 0; k < totalFrames; k++) {
