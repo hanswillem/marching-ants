@@ -24,15 +24,25 @@
             }
 
             body {
-                background: var(--blue);
+                background: #ffffff;
                 color: var(--white);
                 font-family: "Roboto", sans-serif;
                 font-size: 13px;
                 display: flex;
                 flex-direction: column;
-                height: 100vh;
-                overflow: hidden;
+                align-items: center; /* center #app horizontally */
+                min-height: 100vh;
+                padding: 12px 24px 24px 24px;
+                overflow: auto;
                 user-select: none;
+            }
+
+            /* ── App wrapper — columns: toolbar / canvas / bottom-bar ────── */
+            #app {
+                display: flex;
+                flex-direction: column;
+                align-items: flex-start; /* each row sizes to its own content */
+                gap: 6px; /* breathing room between bar and canvas */
             }
 
             /* ── Toolbar (top bar) ───────────────────────────────────────── */
@@ -41,29 +51,26 @@
                 height: 45px;
                 display: flex;
                 align-items: stretch;
-                justify-content: center;
                 flex-shrink: 0;
                 flex-wrap: nowrap;
-                overflow: hidden;
+                margin-left: -1px; /* align with left edge of canvas outline */
             }
 
             /* ── Canvas area ─────────────────────────────────────────────── */
             #canvas-area {
-                flex: 1;
-                overflow: auto;
-                background: #ffffff;
-                display: flex;
-                align-items: center;
-                justify-content: center;
+                flex: none;
+                overflow: visible;
+                position: relative;
             }
 
             #main-canvas {
                 display: block;
-                flex-shrink: 0;
                 cursor: crosshair;
                 background: #fff;
                 outline: 1px solid var(--blue);
-                /* size = HTML attributes: fixed 1920×1080 */
+                /* Always exactly 1920×1080 — never scales */
+                width: 1920px;
+                height: 1080px;
             }
 
             /* ── Bottom bar ──────────────────────────────────────────────── */
@@ -72,9 +79,9 @@
                 height: 45px;
                 display: flex;
                 align-items: stretch;
-                justify-content: center;
                 flex-shrink: 0;
-                overflow: hidden;
+                flex-wrap: nowrap;
+                margin-left: -1px; /* align with left edge of canvas outline */
             }
 
             /* ── Buttons ─────────────────────────────────────────────────── */
@@ -118,8 +125,6 @@
             button:hover:not(:disabled):not(.force-inactive) {
                 background-color: var(--white);
                 color: var(--blue);
-                border-top-color: var(--white);
-                border-bottom-color: var(--white);
             }
             button.force-inactive {
                 background-color: var(--blue) !important;
@@ -134,18 +139,20 @@
             button.active {
                 background-color: var(--white);
                 color: var(--blue);
-                border-top-color: var(--white);
-                border-bottom-color: var(--white);
             }
 
             /* ── FPS group (number + label as one undivided block) ───────── */
             #fps-group {
                 display: flex;
                 align-items: center;
-                /* no left border — the group is flush at the start of the bar content */
+                justify-content: center; /* centres the whole "6 FPS" unit */
+                gap: 4px; /* space between number and "FPS" text */
+                background: var(--blue);
+                border-left: 1px solid var(--white);
                 border-right: 1px solid var(--white);
-                margin: 0 -1px 0 0; /* only collapse the right border */
-                padding: 0 0 0 14px; /* left indent matches button padding */
+                width: 90px; /* fixed width so centering is meaningful */
+                margin: 0 -1px;
+                padding: 0;
                 flex-shrink: 0;
                 position: relative;
             }
@@ -157,7 +164,10 @@
                 font-family: "Roboto", sans-serif;
                 font-size: 13px;
                 font-weight: 400;
-                width: 24px; /* just wide enough for two digits */
+                /* shrink the input box to exactly fit its text content,
+                   so no invisible padding skews the visual centre */
+                field-sizing: content;
+                min-width: 8px;
                 height: 100%;
                 text-align: center;
                 padding: 0;
@@ -178,7 +188,7 @@
                 font-family: "Roboto", sans-serif;
                 font-size: 13px;
                 font-weight: 400;
-                padding: 0 10px 0 4px; /* 4px gap after the number, 10px before the border */
+                padding: 0; /* gap handled by #fps-group's gap property */
                 pointer-events: none;
                 flex-shrink: 0;
             }
@@ -252,14 +262,10 @@
             .frame-tab.active {
                 background-color: var(--white);
                 color: var(--blue);
-                border-top-color: var(--white);
-                border-bottom-color: var(--white);
             }
             .frame-tab:hover:not(.active) {
                 background-color: var(--white);
                 color: var(--blue);
-                border-top-color: var(--white);
-                border-bottom-color: var(--white);
             }
 
             .tab-del {
@@ -278,17 +284,30 @@
                 pointer-events: auto;
             }
 
-            /* first element in toolbar has no left border */
+            /* first element in toolbar — no left border */
             #undo-btn {
                 border-left: none;
                 margin: 0 -1px 0 0;
             }
 
-            /* last element in each bar has no right border */
-            #add-frame-btn {
+            /* last element in toolbar by default — no right border */
+            #ref-toggle-btn {
                 border-right: none;
                 margin: 0 0 0 -1px;
             }
+            /* when opacity slider is visible, button is no longer last */
+            #toolbar.has-opacity #ref-toggle-btn {
+                border-right: 1px solid var(--white);
+                margin: 0 -1px;
+            }
+
+            /* first element in bottom bar — no left border */
+            #onion-btn {
+                border-left: none;
+                margin: 0 -1px 0 0;
+            }
+
+            /* last element in bottom bar — no right border */
             #export-btn {
                 border-right: none;
                 margin: 0 0 0 -1px;
@@ -303,44 +322,58 @@
         </style>
     </head>
     <body>
-        <!-- ── Toolbar ─────────────────────────────────────────────────── -->
-        <div id="toolbar">
-            <button id="undo-btn" disabled>Undo</button>
-            <button id="clear-btn">Clear Frame</button>
-            <button id="onion-btn">Onion Skinning</button>
-            <button id="ref-toggle-btn">Upload Image</button>
-            <input
-                type="file"
-                id="ref-file"
-                accept="image/*"
-                style="display: none"
-            />
-            <span id="ref-opacity-label" style="display: none">Opacity</span>
-            <input
-                type="range"
-                id="ref-opacity-slider"
-                min="0"
-                max="100"
-                value="100"
-                style="display: none"
-            />
-            <button id="export-btn">Export</button>
-        </div>
-
-        <!-- ── Canvas ─────────────────────────────────────────────────── -->
-        <div id="canvas-area">
-            <canvas id="main-canvas" width="800" height="600"></canvas>
-        </div>
-
-        <!-- ── Bottom bar ──────────────────────────────────────────────── -->
-        <div id="bottom-bar">
-            <div id="fps-group">
-                <input type="number" id="fps-num" min="1" max="24" value="6" />
-                <span id="fps-label">FPS</span>
+        <div id="app">
+            <!-- ── Toolbar ─────────────────────────────────────────────────── -->
+            <div id="toolbar">
+                <button id="undo-btn" disabled>Undo</button>
+                <button id="clear-btn">Clear Frame</button>
+                <button id="ref-toggle-btn">Upload Image</button>
+                <input
+                    type="file"
+                    id="ref-file"
+                    accept="image/*"
+                    style="display: none"
+                />
+                <span id="ref-opacity-label" style="display: none"
+                    >Opacity</span
+                >
+                <input
+                    type="range"
+                    id="ref-opacity-slider"
+                    min="0"
+                    max="100"
+                    value="100"
+                    style="display: none"
+                />
             </div>
-            <button id="play-btn" title="Play / Pause  (Space)">▶</button>
-            <button id="add-frame-btn" title="Add frame  (max 24)">+</button>
+
+            <!-- ── Canvas ─────────────────────────────────────────────────── -->
+            <div id="canvas-area">
+                <canvas id="main-canvas" width="800" height="600"></canvas>
+            </div>
+
+            <!-- ── Bottom bar ──────────────────────────────────────────────── -->
+            <div id="bottom-bar">
+                <button id="onion-btn">Onion Skinning</button>
+                <div id="fps-group">
+                    <input
+                        type="number"
+                        id="fps-num"
+                        min="1"
+                        max="24"
+                        value="6"
+                    />
+                    <span id="fps-label">FPS</span>
+                </div>
+                <button id="play-btn" title="Play / Pause  (Space)">▶</button>
+                <!-- frame tabs injected here by buildStrip() -->
+                <button id="add-frame-btn" title="Add frame  (max 24)">
+                    +
+                </button>
+                <button id="export-btn">Export</button>
+            </div>
         </div>
+        <!-- #app -->
 
         <script>
             // ═══════════════════════════════════════════════════════════════
@@ -388,7 +421,7 @@
                 // Pan mode (G key) — translate strokes within the canvas
                 panMode: false,
                 isPanning: false,
-                panLastPos: null,   // canvas-space coords of last mousemove
+                panLastPos: null, // canvas-space coords of last mousemove
                 panOffset: { x: 0, y: 0 }, // live preview offset while dragging
 
                 // Undo — stack of {frameIndex, strokes} snapshots
@@ -691,15 +724,20 @@
             // ═══════════════════════════════════════════════════════════════
             function updateCursor() {
                 if (state.isPlaying) {
-                    canvas.style.cursor = 'url("cursors/cursor_playing.svg") 16 16, default';
+                    canvas.style.cursor =
+                        'url("cursors/cursor_playing.svg") 16 16, default';
                 } else if (state.ellipseMode) {
-                    canvas.style.cursor = 'url("cursors/cursor_circle.svg") 16 16, crosshair';
+                    canvas.style.cursor =
+                        'url("cursors/cursor_circle.svg") 16 16, crosshair';
                 } else if (state.rectMode) {
-                    canvas.style.cursor = 'url("cursors/cursor_rectangle.svg") 16 16, crosshair';
+                    canvas.style.cursor =
+                        'url("cursors/cursor_rectangle.svg") 16 16, crosshair';
                 } else if (state.polylineActive) {
-                    canvas.style.cursor = 'url("cursors/cursor_polyline.svg") 16 16, crosshair';
+                    canvas.style.cursor =
+                        'url("cursors/cursor_polyline.svg") 16 16, crosshair';
                 } else {
-                    canvas.style.cursor = 'url("cursors/cursor_regular.svg") 16 16, crosshair';
+                    canvas.style.cursor =
+                        'url("cursors/cursor_regular.svg") 16 16, crosshair';
                 }
             }
             updateCursor();
@@ -719,7 +757,9 @@
                 if (state.polylineActive) {
                     if (nearPolyStart(pos)) {
                         // Close the shape: draw back to first anchor and commit
-                        state.polylinePoints.push({ ...state.polylinePoints[0] });
+                        state.polylinePoints.push({
+                            ...state.polylinePoints[0],
+                        });
                         state.previewStroke = null;
                         commitPolyline(); // commits closed shape, stays in polyline mode
                         return;
@@ -792,12 +832,17 @@
 
                 if (state.polylineActive) {
                     if (state.polylinePoints.length > 0) {
-                        const last = state.polylinePoints[state.polylinePoints.length - 1];
+                        const last =
+                            state.polylinePoints[
+                                state.polylinePoints.length - 1
+                            ];
                         // Snap preview endpoint to first point when cursor is close
                         const snapPos = nearPolyStart(pos)
                             ? { ...state.polylinePoints[0] }
                             : { ...pos };
-                        state.previewStroke = { points: [{ ...last }, snapPos] };
+                        state.previewStroke = {
+                            points: [{ ...last }, snapPos],
+                        };
                     }
                     return;
                 }
@@ -805,7 +850,11 @@
                 if (!state.isDrawing) return;
 
                 // Space held: shift mouseDownPos by the mouse delta so shape moves
-                if (state.spaceRepositioning && state.spaceRepoLastPos && state.mouseDownPos) {
+                if (
+                    state.spaceRepositioning &&
+                    state.spaceRepoLastPos &&
+                    state.mouseDownPos
+                ) {
                     const dx = pos.x - state.spaceRepoLastPos.x;
                     const dy = pos.y - state.spaceRepoLastPos.y;
                     state.mouseDownPos.x += dx;
@@ -820,7 +869,11 @@
                         points: [{ ...state.mouseDownPos }, { ...pos }],
                     };
                 } else if (state.drawMode === "ellipse") {
-                    const pts = ellipsePoints(state.mouseDownPos, pos, e.shiftKey);
+                    const pts = ellipsePoints(
+                        state.mouseDownPos,
+                        pos,
+                        e.shiftKey,
+                    );
                     state.previewStroke = pts.length ? { points: pts } : null;
                 } else if (state.drawMode === "rect") {
                     const pts = rectPoints(state.mouseDownPos, pos, e.shiftKey);
@@ -837,12 +890,15 @@
                     const idx = state.currentFrameIndex;
                     state.undoStack.push({
                         frameIndex: idx,
-                        strokes: state.frames[idx].strokes.map(s => ({
-                            points: s.points.map(p => ({ ...p })),
+                        strokes: state.frames[idx].strokes.map((s) => ({
+                            points: s.points.map((p) => ({ ...p })),
                         })),
                     });
                     for (const stroke of state.frames[idx].strokes)
-                        for (const pt of stroke.points) { pt.x += dx; pt.y += dy; }
+                        for (const pt of stroke.points) {
+                            pt.x += dx;
+                            pt.y += dy;
+                        }
                     updateUndoBtn();
                 }
             }
@@ -870,7 +926,10 @@
                         });
                     }
                     state.previewStroke = null;
-                } else if (state.drawMode === "ellipse" || state.drawMode === "rect") {
+                } else if (
+                    state.drawMode === "ellipse" ||
+                    state.drawMode === "rect"
+                ) {
                     const p = state.previewStroke;
                     if (p && p.points.length >= 2) {
                         commitStroke({ points: [...p.points] });
@@ -907,7 +966,8 @@
             // Keyboard shortcuts
             document.addEventListener("keydown", (e) => {
                 // Don't fire shortcuts when typing in an input
-                const inInput = e.target.tagName === "INPUT" && e.target.type !== "range";
+                const inInput =
+                    e.target.tagName === "INPUT" && e.target.type !== "range";
 
                 if (e.key === "Escape") {
                     if (state.polylineActive) {
@@ -929,10 +989,16 @@
                 }
                 if (e.code === "Space" && !inInput) {
                     e.preventDefault();
-                    if (state.isDrawing && (state.drawMode === "ellipse" || state.drawMode === "rect")) {
+                    if (
+                        state.isDrawing &&
+                        (state.drawMode === "ellipse" ||
+                            state.drawMode === "rect")
+                    ) {
                         // Start repositioning the shape
                         state.spaceRepositioning = true;
-                        state.spaceRepoLastPos = state.lastMousePos ? { ...state.lastMousePos } : null;
+                        state.spaceRepoLastPos = state.lastMousePos
+                            ? { ...state.lastMousePos }
+                            : null;
                     } else {
                         togglePlay();
                     }
@@ -947,12 +1013,17 @@
                         if (!state.panMode) {
                             state.panMode = true;
                             state.isPanning = true;
-                            state.panLastPos = state.lastMousePos ? { ...state.lastMousePos } : null;
+                            state.panLastPos = state.lastMousePos
+                                ? { ...state.lastMousePos }
+                                : null;
                         }
                     }
                     if (e.key === "d" || e.key === "D") {
                         e.preventDefault();
-                        if (state.polylineActive) { state.previewStroke = null; finishPolyline(); }
+                        if (state.polylineActive) {
+                            state.previewStroke = null;
+                            finishPolyline();
+                        }
                         state.panMode = false;
                         state.isPanning = false;
                         state.ellipseMode = false;
@@ -976,7 +1047,10 @@
                     }
                     if (e.key === "c" || e.key === "C") {
                         e.preventDefault();
-                        if (state.polylineActive) { state.previewStroke = null; finishPolyline(); }
+                        if (state.polylineActive) {
+                            state.previewStroke = null;
+                            finishPolyline();
+                        }
                         state.ellipseMode = !state.ellipseMode;
                         state.rectMode = false;
                         if (!state.ellipseMode) state.previewStroke = null;
@@ -984,7 +1058,10 @@
                     }
                     if (e.key === "r" || e.key === "R") {
                         e.preventDefault();
-                        if (state.polylineActive) { state.previewStroke = null; finishPolyline(); }
+                        if (state.polylineActive) {
+                            state.previewStroke = null;
+                            finishPolyline();
+                        }
                         state.rectMode = !state.rectMode;
                         state.ellipseMode = false;
                         if (!state.rectMode) state.previewStroke = null;
@@ -1049,15 +1126,27 @@
             function ellipsePoints(p0, p1, constrain) {
                 let rx = Math.abs(p1.x - p0.x) / 2;
                 let ry = Math.abs(p1.y - p0.y) / 2;
-                if (constrain) { const r = Math.min(rx, ry); rx = r; ry = r; }
+                let cx, cy;
+                if (constrain) {
+                    const r = Math.min(rx, ry);
+                    rx = r;
+                    ry = r;
+                    // Anchor center to p0 corner so the mousedown point never drifts
+                    cx = p0.x + Math.sign(p1.x - p0.x) * r;
+                    cy = p0.y + Math.sign(p1.y - p0.y) * r;
+                } else {
+                    cx = (p0.x + p1.x) / 2;
+                    cy = (p0.y + p1.y) / 2;
+                }
                 if (rx < 1 || ry < 1) return [];
-                const cx = (p0.x + p1.x) / 2;
-                const cy = (p0.y + p1.y) / 2;
                 const N = 64;
                 const pts = [];
                 for (let i = 0; i <= N; i++) {
                     const a = (i / N) * Math.PI * 2;
-                    pts.push({ x: cx + Math.cos(a) * rx, y: cy + Math.sin(a) * ry });
+                    pts.push({
+                        x: cx + Math.cos(a) * rx,
+                        y: cy + Math.sin(a) * ry,
+                    });
                 }
                 return pts;
             }
@@ -1071,11 +1160,15 @@
                     h = Math.sign(h) * side;
                 }
                 if (Math.abs(w) < 1 || Math.abs(h) < 1) return [];
-                const x0 = p0.x, y0 = p0.y;
-                const x1 = p0.x + w, y1 = p0.y + h;
+                const x0 = p0.x,
+                    y0 = p0.y;
+                const x1 = p0.x + w,
+                    y1 = p0.y + h;
                 return [
-                    { x: x0, y: y0 }, { x: x1, y: y0 },
-                    { x: x1, y: y1 }, { x: x0, y: y1 },
+                    { x: x0, y: y0 },
+                    { x: x1, y: y0 },
+                    { x: x1, y: y1 },
+                    { x: x0, y: y1 },
                     { x: x0, y: y0 },
                 ];
             }
@@ -1132,7 +1225,11 @@
                 btn.classList.toggle("active", state.onionSkin);
                 if (!state.onionSkin) {
                     btn.classList.add("force-inactive");
-                    btn.addEventListener("mouseleave", () => btn.classList.remove("force-inactive"), { once: true });
+                    btn.addEventListener(
+                        "mouseleave",
+                        () => btn.classList.remove("force-inactive"),
+                        { once: true },
+                    );
                 } else {
                     // Remove force-inactive in case it was left over from a keyboard toggle
                     btn.classList.remove("force-inactive");
@@ -1205,6 +1302,7 @@
             fpsNum.addEventListener("focus", () => fpsNum.select());
 
             // Reference image — single toggle button
+            const toolbar = document.getElementById("toolbar");
             document
                 .getElementById("ref-toggle-btn")
                 .addEventListener("click", () => {
@@ -1219,6 +1317,7 @@
                         document.getElementById(
                             "ref-opacity-slider",
                         ).style.display = "none";
+                        toolbar.classList.remove("has-opacity");
                     } else {
                         document.getElementById("ref-file").click();
                     }
@@ -1239,6 +1338,7 @@
                         document.getElementById(
                             "ref-opacity-slider",
                         ).style.display = "";
+                        toolbar.classList.add("has-opacity");
                     };
                     img.src = URL.createObjectURL(file);
                 });
@@ -1352,9 +1452,10 @@
                     const numDrawn = state.frames.length;
                     // Single frame: always export 8 frames (one full marching-ants loop).
                     // Multi-frame: export enough sub-frames for the full animation at ANT_FPS.
-                    const totalFrames = numDrawn === 1
-                        ? 8
-                        : Math.round((numDrawn * ANT_FPS) / appFPS);
+                    const totalFrames =
+                        numDrawn === 1
+                            ? 8
+                            : Math.round((numDrawn * ANT_FPS) / appFPS);
 
                     const files = [];
                     for (let k = 0; k < totalFrames; k++) {
@@ -1415,9 +1516,16 @@
                 const img = new Image();
                 img.onload = () => {
                     state.referenceImage = img;
-                    document.getElementById("ref-toggle-btn").textContent = "Clear Image";
-                    document.getElementById("ref-opacity-label").style.display = "";
-                    document.getElementById("ref-opacity-slider").style.display = "";
+                    document.getElementById("ref-toggle-btn").textContent =
+                        "Clear Image";
+                    document.getElementById("ref-opacity-label").style.display =
+                        "";
+                    document.getElementById(
+                        "ref-opacity-slider",
+                    ).style.display = "";
+                    document
+                        .getElementById("toolbar")
+                        .classList.add("has-opacity");
                 };
                 img.src = URL.createObjectURL(file);
             }
