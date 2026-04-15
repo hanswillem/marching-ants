@@ -68,9 +68,16 @@
                 cursor: crosshair;
                 background: #fff;
                 outline: 1px solid var(--blue);
-                /* Always exactly 1920×1080 — never scales */
-                width: 1920px;
-                height: 1080px;
+                /* Internal buffer is always 1920×1080 (set by JS).
+                   CSS display size is capped at 1920px but scales down
+                   on smaller/Retina screens so nothing overflows.
+                   getPos() maps CSS coords → canvas coords automatically. */
+                width: min(
+                    1920px,
+                    calc(100vw - 48px),
+                    calc((100vh - 146px) * (1920 / 1080))
+                );
+                aspect-ratio: 1920 / 1080;
             }
 
             /* ── Bottom bar ──────────────────────────────────────────────── */
