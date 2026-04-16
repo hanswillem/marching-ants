@@ -110,7 +110,8 @@
                 transition:
                     background-color 0.1s,
                     color 0.1s,
-                    border-color 0.1s;
+                    border-color 0.1s,
+                    outline-color 0.1s;
                 border-radius: 0;
                 margin: 0 -1px;
                 flex-shrink: 0;
@@ -120,18 +121,25 @@
                 justify-content: center;
                 -webkit-appearance: none;
                 appearance: none;
-                outline: none;
+                outline: 1px solid transparent;
+                outline-offset: -1px;
                 box-shadow: none;
                 position: relative;
+                z-index: 0;
             }
             button:focus,
             button:focus-visible {
-                outline: none;
-                box-shadow: none;
+                outline: 1px solid transparent;
             }
             button:hover:not(:disabled):not(.force-inactive) {
                 background-color: var(--white);
                 color: var(--blue);
+                outline-color: var(--blue);
+                z-index: 1;
+            }
+            button:active:not(:disabled):not(.force-inactive) {
+                outline-color: var(--blue);
+                z-index: 1;
             }
             button.force-inactive {
                 background-color: var(--blue) !important;
@@ -162,6 +170,34 @@
                 padding: 0;
                 flex-shrink: 0;
                 position: relative;
+                cursor: pointer;
+                transition:
+                    background-color 0.1s,
+                    color 0.1s,
+                    outline-color 0.1s;
+                outline: 1px solid transparent;
+                outline-offset: -1px;
+                z-index: 0;
+            }
+            /* Hover: white background, blue text — signals it's clickable */
+            #fps-group:hover {
+                background: var(--white);
+                outline-color: var(--blue);
+                z-index: 1;
+            }
+            #fps-group:hover #fps-num,
+            #fps-group:hover #fps-label {
+                color: var(--blue);
+            }
+            /* Focus-within (after click): return to blue, keep outline, text selected */
+            #fps-group:focus-within {
+                background: var(--blue);
+                outline-color: var(--blue);
+                z-index: 1;
+            }
+            #fps-group:focus-within #fps-num,
+            #fps-group:focus-within #fps-label {
+                color: var(--white);
             }
 
             #fps-num {
@@ -255,24 +291,38 @@
                 justify-content: center;
                 transition:
                     background-color 0.1s,
-                    color 0.1s;
+                    color 0.1s,
+                    outline-color 0.1s;
                 -webkit-appearance: none;
                 appearance: none;
-                outline: none;
+                outline: 1px solid transparent;
+                outline-offset: -1px;
                 box-shadow: none;
+                z-index: 0;
             }
             .frame-tab:focus,
             .frame-tab:focus-visible {
-                outline: none;
-                box-shadow: none;
+                outline: 1px solid transparent;
             }
             .frame-tab.active {
                 background-color: var(--white);
                 color: var(--blue);
+                outline-color: var(--blue);
+                z-index: 1;
+            }
+            /* During playback: snap instantly, no transitions on frame tabs */
+            #bottom-bar.is-playing .frame-tab {
+                transition: none;
             }
             .frame-tab:hover:not(.active) {
                 background-color: var(--white);
                 color: var(--blue);
+                outline-color: var(--blue);
+                z-index: 1;
+            }
+            .frame-tab:active {
+                outline-color: var(--blue);
+                z-index: 1;
             }
 
             .tab-del {
@@ -419,6 +469,11 @@
 
                 // Onion skinning
                 onionSkin: false,
+
+                // Eraser mode
+                eraserMode: false,
+                _eraserSnapshot: null,
+                _eraserDidErase: false,
 
                 // Space-to-reposition (ellipse / rect only)
                 spaceRepositioning: false,
@@ -742,6 +797,9 @@
                 } else if (state.polylineActive) {
                     canvas.style.cursor =
                         'url("cursors/cursor_polyline.svg") 16 16, crosshair';
+                } else if (state.eraserMode) {
+                    canvas.style.cursor =
+                        'url("cursors/cursor_eraser.svg") 16 16, crosshair';
                 } else {
                     canvas.style.cursor =
                         'url("cursors/cursor_regular.svg") 16 16, crosshair';
@@ -800,6 +858,17 @@
                     return;
                 }
 
+                // ── Eraser mode ───────────────────────────────────────────────
+                if (state.eraserMode) {
+                    // Snapshot current strokes for undo (committed on mouseup if anything was erased)
+                    const idx = state.currentFrameIndex;
+                    state._eraserSnapshot = state.frames[idx].strokes.map((s) => ({
+                        points: s.points.map((p) => ({ ...p })),
+                    }));
+                    state._eraserDidErase = false;
+                    return;
+                }
+
                 // ── Default: freehand ─────────────────────────────────────────
                 state.isDrawing = true;
                 state.drawMode = "freehand";
@@ -850,6 +919,46 @@
                         state.previewStroke = {
                             points: [{ ...last }, snapPos],
                         };
+                    }
+                    return;
+                }
+
+                // ── Eraser mode: remove strokes within radius of cursor ────────
+                if (state.eraserMode && state._eraserSnapshot !== null) {
+                    const RADIUS = 20; // canvas-space pixels
+                    const R2 = RADIUS * RADIUS;
+                    const idx = state.currentFrameIndex;
+                    const before = state.frames[idx].strokes.length;
+                    state.frames[idx].strokes = state.frames[idx].strokes.filter(
+                        (stroke) => {
+                            const pts = stroke.points;
+                            for (let i = 0; i < pts.length; i++) {
+                                // Check each segment (or single point)
+                                const ax = pts[i].x, ay = pts[i].y;
+                                if (i === pts.length - 1) {
+                                    // Last point: just point check
+                                    const dx = ax - pos.x, dy = ay - pos.y;
+                                    if (dx * dx + dy * dy <= R2) return false;
+                                } else {
+                                    // Segment from pts[i] to pts[i+1]
+                                    const bx = pts[i + 1].x, by = pts[i + 1].y;
+                                    const segDx = bx - ax, segDy = by - ay;
+                                    const lenSq = segDx * segDx + segDy * segDy;
+                                    let t = lenSq > 0
+                                        ? ((pos.x - ax) * segDx + (pos.y - ay) * segDy) / lenSq
+                                        : 0;
+                                    t = Math.max(0, Math.min(1, t));
+                                    const cx = ax + t * segDx, cy = ay + t * segDy;
+                                    const dx = pos.x - cx, dy = pos.y - cy;
+                                    if (dx * dx + dy * dy <= R2) return false;
+                                }
+                            }
+                            return true; // keep stroke
+                        },
+                    );
+                    if (state.frames[idx].strokes.length < before) {
+                        state._eraserDidErase = true;
+                        updateUndoBtn();
                     }
                     return;
                 }
@@ -911,7 +1020,24 @@
             }
 
             canvas.addEventListener("mouseup", (e) => {
-                if (e.button !== 0 || !state.isDrawing) return;
+                if (e.button !== 0) return;
+
+                // ── Eraser mode: commit undo entry if anything was erased ──────
+                if (state.eraserMode) {
+                    if (state._eraserDidErase) {
+                        const idx = state.currentFrameIndex;
+                        state.undoStack.push({
+                            frameIndex: idx,
+                            strokes: state._eraserSnapshot,
+                        });
+                        updateUndoBtn();
+                    }
+                    state._eraserSnapshot = null;
+                    state._eraserDidErase = false;
+                    return;
+                }
+
+                if (!state.isDrawing) return;
 
                 if (state.drawMode === "freehand") {
                     if (
@@ -993,6 +1119,10 @@
                         state.previewStroke = null;
                         updateCursor();
                     }
+                    if (state.eraserMode) {
+                        state.eraserMode = false;
+                        updateCursor();
+                    }
                 }
                 if (e.code === "Space" && !inInput) {
                     e.preventDefault();
@@ -1035,6 +1165,7 @@
                         state.isPanning = false;
                         state.ellipseMode = false;
                         state.rectMode = false;
+                        state.eraserMode = false;
                         state.previewStroke = null;
                         updateCursor();
                     }
@@ -1046,6 +1177,7 @@
                         } else {
                             state.ellipseMode = false;
                             state.rectMode = false;
+                            state.eraserMode = false;
                             state.previewStroke = null;
                             state.polylineActive = true;
                             state.polylinePoints = [];
@@ -1060,6 +1192,7 @@
                         }
                         state.ellipseMode = !state.ellipseMode;
                         state.rectMode = false;
+                        state.eraserMode = false;
                         if (!state.ellipseMode) state.previewStroke = null;
                         updateCursor();
                     }
@@ -1071,8 +1204,33 @@
                         }
                         state.rectMode = !state.rectMode;
                         state.ellipseMode = false;
+                        state.eraserMode = false;
                         if (!state.rectMode) state.previewStroke = null;
                         updateCursor();
+                    }
+                    if (e.key === "e" || e.key === "E") {
+                        e.preventDefault();
+                        if (!state.eraserMode
+                            && !state.isDrawing
+                            && !(state.polylineActive && state.polylinePoints.length > 0)) {
+                            // Save current mode so we can restore it on key-up
+                            state._eraserPrevState = {
+                                ellipseMode: state.ellipseMode,
+                                rectMode: state.rectMode,
+                                polylineActive: state.polylineActive,
+                                panMode: state.panMode,
+                            };
+                            // Temporarily suspend other modes (preserve their state)
+                            state.ellipseMode = false;
+                            state.rectMode = false;
+                            state.polylineActive = false; // polylinePoints are kept in state
+                            state.panMode = false;
+                            state.isPanning = false;
+                            state.previewStroke = null;
+                            state.eraserMode = true;
+                            updateCursor();
+                        }
+                        // else: key repeat while held — do nothing
                     }
                     if (e.key === "f" || e.key === "F") {
                         e.preventDefault();
@@ -1121,6 +1279,35 @@
                     state.isPanning = false;
                     state.panLastPos = null;
                     commitPan();
+                }
+                if (e.key === "e" || e.key === "E") {
+                    if (!state.eraserMode) return;
+                    // If mid-erase drag, commit undo before deactivating
+                    if (state._eraserDidErase && state._eraserSnapshot !== null) {
+                        state.undoStack.push({
+                            frameIndex: state.currentFrameIndex,
+                            strokes: state._eraserSnapshot,
+                        });
+                        updateUndoBtn();
+                    }
+                    state._eraserSnapshot = null;
+                    state._eraserDidErase = false;
+                    state.eraserMode = false;
+                    // Restore the mode that was active before E was held
+                    if (state._eraserPrevState) {
+                        state.ellipseMode = state._eraserPrevState.ellipseMode;
+                        state.rectMode = state._eraserPrevState.rectMode;
+                        state.polylineActive = state._eraserPrevState.polylineActive;
+                        state.panMode = state._eraserPrevState.panMode;
+                        if (state.panMode) {
+                            state.isPanning = true;
+                            state.panLastPos = state.lastMousePos
+                                ? { ...state.lastMousePos }
+                                : null;
+                        }
+                        state._eraserPrevState = null;
+                    }
+                    updateCursor();
                 }
             });
 
@@ -1279,14 +1466,16 @@
                 const btn = document.getElementById("play-btn");
                 btn.textContent = state.isPlaying ? "⏸" : "▶";
                 btn.classList.toggle("playing", state.isPlaying);
+                document.getElementById("bottom-bar").classList.toggle("is-playing", state.isPlaying);
                 updateCursor();
 
-                // Cancel any active drawing/polyline when play starts
+                // Cancel any active drawing/polyline/eraser when play starts
                 if (state.isPlaying) {
                     if (state.polylineActive) cancelPolyline();
                     state.isDrawing = false;
                     state.currentStroke = null;
                     state.previewStroke = null;
+                    state.eraserMode = false;
                 }
             }
             document
@@ -1307,6 +1496,11 @@
                 fpsNum.value = state.fps;
             });
             fpsNum.addEventListener("focus", () => fpsNum.select());
+
+            // Clicking anywhere in the FPS group focuses the input (which selects its text)
+            document.getElementById("fps-group").addEventListener("click", () => {
+                fpsNum.focus();
+            });
 
             // Reference image — single toggle button
             const toolbar = document.getElementById("toolbar");
