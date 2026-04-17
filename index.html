@@ -341,7 +341,7 @@
             }
 
             /* first element in toolbar — no left border */
-            #undo-btn {
+            #clear-btn {
                 border-left: none;
                 margin: 0 -1px 0 0;
             }
@@ -381,9 +381,8 @@
         <div id="app">
             <!-- ── Toolbar ─────────────────────────────────────────────────── -->
             <div id="toolbar">
-                <button id="undo-btn" disabled>Undo</button>
                 <button id="clear-btn">Clear Frame</button>
-                <button id="ref-toggle-btn">Upload Image</button>
+                <button id="ref-toggle-btn">Upload IMG</button>
                 <input
                     type="file"
                     id="ref-file"
@@ -860,9 +859,11 @@
                 if (state.eraserMode) {
                     // Snapshot current strokes for undo (committed on mouseup if anything was erased)
                     const idx = state.currentFrameIndex;
-                    state._eraserSnapshot = state.frames[idx].strokes.map((s) => ({
-                        points: s.points.map((p) => ({ ...p })),
-                    }));
+                    state._eraserSnapshot = state.frames[idx].strokes.map(
+                        (s) => ({
+                            points: s.points.map((p) => ({ ...p })),
+                        }),
+                    );
                     state._eraserDidErase = false;
                     return;
                 }
@@ -927,33 +928,42 @@
                     const R2 = RADIUS * RADIUS;
                     const idx = state.currentFrameIndex;
                     const before = state.frames[idx].strokes.length;
-                    state.frames[idx].strokes = state.frames[idx].strokes.filter(
-                        (stroke) => {
-                            const pts = stroke.points;
-                            for (let i = 0; i < pts.length; i++) {
-                                // Check each segment (or single point)
-                                const ax = pts[i].x, ay = pts[i].y;
-                                if (i === pts.length - 1) {
-                                    // Last point: just point check
-                                    const dx = ax - pos.x, dy = ay - pos.y;
-                                    if (dx * dx + dy * dy <= R2) return false;
-                                } else {
-                                    // Segment from pts[i] to pts[i+1]
-                                    const bx = pts[i + 1].x, by = pts[i + 1].y;
-                                    const segDx = bx - ax, segDy = by - ay;
-                                    const lenSq = segDx * segDx + segDy * segDy;
-                                    let t = lenSq > 0
-                                        ? ((pos.x - ax) * segDx + (pos.y - ay) * segDy) / lenSq
+                    state.frames[idx].strokes = state.frames[
+                        idx
+                    ].strokes.filter((stroke) => {
+                        const pts = stroke.points;
+                        for (let i = 0; i < pts.length; i++) {
+                            // Check each segment (or single point)
+                            const ax = pts[i].x,
+                                ay = pts[i].y;
+                            if (i === pts.length - 1) {
+                                // Last point: just point check
+                                const dx = ax - pos.x,
+                                    dy = ay - pos.y;
+                                if (dx * dx + dy * dy <= R2) return false;
+                            } else {
+                                // Segment from pts[i] to pts[i+1]
+                                const bx = pts[i + 1].x,
+                                    by = pts[i + 1].y;
+                                const segDx = bx - ax,
+                                    segDy = by - ay;
+                                const lenSq = segDx * segDx + segDy * segDy;
+                                let t =
+                                    lenSq > 0
+                                        ? ((pos.x - ax) * segDx +
+                                              (pos.y - ay) * segDy) /
+                                          lenSq
                                         : 0;
-                                    t = Math.max(0, Math.min(1, t));
-                                    const cx = ax + t * segDx, cy = ay + t * segDy;
-                                    const dx = pos.x - cx, dy = pos.y - cy;
-                                    if (dx * dx + dy * dy <= R2) return false;
-                                }
+                                t = Math.max(0, Math.min(1, t));
+                                const cx = ax + t * segDx,
+                                    cy = ay + t * segDy;
+                                const dx = pos.x - cx,
+                                    dy = pos.y - cy;
+                                if (dx * dx + dy * dy <= R2) return false;
                             }
-                            return true; // keep stroke
-                        },
-                    );
+                        }
+                        return true; // keep stroke
+                    });
                     if (state.frames[idx].strokes.length < before) {
                         state._eraserDidErase = true;
                         updateUndoBtn();
@@ -986,7 +996,6 @@
                     const pts = ellipsePoints(
                         state.mouseDownPos,
                         pos,
-                        e.shiftKey,
                     );
                     state.previewStroke = pts.length ? { points: pts } : null;
                 } else if (state.drawMode === "rect") {
@@ -1143,7 +1152,7 @@
                     undo();
                 }
                 if (!inInput && !e.ctrlKey && !e.metaKey && !e.altKey) {
-                    if (e.key === "g" || e.key === "G") {
+                    if (e.key === "h" || e.key === "H") {
                         e.preventDefault();
                         if (!state.panMode) {
                             state.panMode = true;
@@ -1208,9 +1217,14 @@
                     }
                     if (e.key === "e" || e.key === "E") {
                         e.preventDefault();
-                        if (!state.eraserMode
-                            && !state.isDrawing
-                            && !(state.polylineActive && state.polylinePoints.length > 0)) {
+                        if (
+                            !state.eraserMode &&
+                            !state.isDrawing &&
+                            !(
+                                state.polylineActive &&
+                                state.polylinePoints.length > 0
+                            )
+                        ) {
                             // Save current mode so we can restore it on key-up
                             state._eraserPrevState = {
                                 ellipseMode: state.ellipseMode,
@@ -1275,7 +1289,7 @@
                     state.spaceRepositioning = false;
                     state.spaceRepoLastPos = null;
                 }
-                if (e.key === "g" || e.key === "G") {
+                if (e.key === "h" || e.key === "H") {
                     if (!state.panMode) return;
                     state.panMode = false;
                     state.isPanning = false;
@@ -1285,7 +1299,10 @@
                 if (e.key === "e" || e.key === "E") {
                     if (!state.eraserMode) return;
                     // If mid-erase drag, commit undo before deactivating
-                    if (state._eraserDidErase && state._eraserSnapshot !== null) {
+                    if (
+                        state._eraserDidErase &&
+                        state._eraserSnapshot !== null
+                    ) {
                         state.undoStack.push({
                             frameIndex: state.currentFrameIndex,
                             strokes: state._eraserSnapshot,
@@ -1299,7 +1316,8 @@
                     if (state._eraserPrevState) {
                         state.ellipseMode = state._eraserPrevState.ellipseMode;
                         state.rectMode = state._eraserPrevState.rectMode;
-                        state.polylineActive = state._eraserPrevState.polylineActive;
+                        state.polylineActive =
+                            state._eraserPrevState.polylineActive;
                         state.panMode = state._eraserPrevState.panMode;
                         if (state.panMode) {
                             state.isPanning = true;
@@ -1319,22 +1337,13 @@
             // ═══════════════════════════════════════════════════════════════
             //  Shape helpers
             // ═══════════════════════════════════════════════════════════════
-            function ellipsePoints(p0, p1, constrain) {
-                let rx = Math.abs(p1.x - p0.x) / 2;
-                let ry = Math.abs(p1.y - p0.y) / 2;
-                let cx, cy;
-                if (constrain) {
-                    const r = Math.min(rx, ry);
-                    rx = r;
-                    ry = r;
-                    // Anchor center to p0 corner so the mousedown point never drifts
-                    cx = p0.x + Math.sign(p1.x - p0.x) * r;
-                    cy = p0.y + Math.sign(p1.y - p0.y) * r;
-                } else {
-                    cx = (p0.x + p1.x) / 2;
-                    cy = (p0.y + p1.y) / 2;
-                }
-                if (rx < 1 || ry < 1) return [];
+            function ellipsePoints(p0, p1) {
+                // Always a perfect circle — radius is the smaller of the two axes
+                const r = Math.min(Math.abs(p1.x - p0.x), Math.abs(p1.y - p0.y)) / 2;
+                const cx = p0.x + Math.sign(p1.x - p0.x) * r;
+                const cy = p0.y + Math.sign(p1.y - p0.y) * r;
+                const rx = r, ry = r;
+                if (rx < 1) return [];
                 const N = 64;
                 const pts = [];
                 for (let i = 0; i <= N; i++) {
@@ -1406,12 +1415,9 @@
                 updateUndoBtn();
             }
 
-            function updateUndoBtn() {
-                document.getElementById("undo-btn").disabled =
-                    state.undoStack.length === 0;
-            }
+            function updateUndoBtn() {} // no-op: undo button removed, shortcut Cmd/Ctrl+Z still works
 
-            document.getElementById("undo-btn").addEventListener("click", undo);
+            document
             document
                 .getElementById("clear-btn")
                 .addEventListener("click", clearFrame);
@@ -1468,7 +1474,9 @@
                 const btn = document.getElementById("play-btn");
                 btn.textContent = state.isPlaying ? "⏸" : "▶";
                 btn.classList.toggle("playing", state.isPlaying);
-                document.getElementById("bottom-bar").classList.toggle("is-playing", state.isPlaying);
+                document
+                    .getElementById("bottom-bar")
+                    .classList.toggle("is-playing", state.isPlaying);
                 updateCursor();
 
                 // Cancel any active drawing/polyline/eraser when play starts
@@ -1500,17 +1508,19 @@
             fpsNum.addEventListener("focus", () => fpsNum.select());
 
             // Clicking anywhere in the FPS group focuses the input (which selects its text)
-            document.getElementById("fps-group").addEventListener("click", () => {
-                fpsNum.focus();
-            });
+            document
+                .getElementById("fps-group")
+                .addEventListener("click", () => {
+                    fpsNum.focus();
+                });
 
             // Reference image — single toggle button (per current frame)
             document
                 .getElementById("ref-toggle-btn")
                 .addEventListener("click", () => {
-                    const anyImage = state.frames.some(f => f.referenceImage);
+                    const anyImage = state.frames.some((f) => f.referenceImage);
                     if (anyImage) {
-                        state.frames.forEach(f => {
+                        state.frames.forEach((f) => {
                             if (f.referenceImage) {
                                 URL.revokeObjectURL(f.referenceImage.src);
                                 f.referenceImage = null;
@@ -1706,15 +1716,18 @@
             function updateImageToolbar() {
                 const frame = state.frames[state.currentFrameIndex];
                 const hasImage = !!frame.referenceImage;
-                const imageCount = state.frames.filter(f => f.referenceImage).length;
                 document.getElementById("ref-toggle-btn").textContent =
-                    imageCount > 1 ? "Remove Images" : hasImage ? "Remove Image" : "Upload Image";
+                    state.frames.some((f) => f.referenceImage)
+                        ? "Remove IMG"
+                        : "Upload IMG";
                 document.getElementById("ref-opacity-label").style.display =
                     hasImage ? "" : "none";
                 const slider = document.getElementById("ref-opacity-slider");
                 slider.style.display = hasImage ? "" : "none";
                 if (hasImage) slider.value = Math.round(state.refOpacity * 100);
-                document.getElementById("toolbar").classList.toggle("has-opacity", hasImage);
+                document
+                    .getElementById("toolbar")
+                    .classList.toggle("has-opacity", hasImage);
             }
 
             // ── Drag-and-drop image onto canvas area ─────────────────────
@@ -1723,7 +1736,8 @@
                 const img = new Image();
                 img.onload = () => {
                     const frame = state.frames[state.currentFrameIndex];
-                    if (frame.referenceImage) URL.revokeObjectURL(frame.referenceImage.src);
+                    if (frame.referenceImage)
+                        URL.revokeObjectURL(frame.referenceImage.src);
                     frame.referenceImage = img;
                     updateImageToolbar();
                 };
@@ -1734,8 +1748,13 @@
             // auto-creating frames as needed up to 24.
             function importSequence(files) {
                 const sorted = Array.from(files)
-                    .filter(f => f.type.startsWith("image/"))
-                    .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: "base" }));
+                    .filter((f) => f.type.startsWith("image/"))
+                    .sort((a, b) =>
+                        a.name.localeCompare(b.name, undefined, {
+                            numeric: true,
+                            sensitivity: "base",
+                        }),
+                    );
                 if (!sorted.length) return;
                 const toLoad = sorted.slice(0, 24);
 
@@ -1746,7 +1765,8 @@
 
                 // Revoke existing images on target frames
                 for (let i = 0; i < toLoad.length; i++) {
-                    if (state.frames[i].referenceImage) URL.revokeObjectURL(state.frames[i].referenceImage.src);
+                    if (state.frames[i].referenceImage)
+                        URL.revokeObjectURL(state.frames[i].referenceImage.src);
                     state.frames[i].referenceImage = null;
                 }
 
@@ -1773,6 +1793,16 @@
             canvasArea.addEventListener("drop", (e) => {
                 e.preventDefault();
                 loadImageFile(e.dataTransfer.files[0]);
+            });
+
+            // Paste image from clipboard (Cmd/Ctrl+V) → current frame
+            document.addEventListener("paste", (e) => {
+                const item = Array.from(e.clipboardData.items).find((i) =>
+                    i.type.startsWith("image/"),
+                );
+                if (!item) return;
+                e.preventDefault();
+                loadImageFile(item.getAsFile());
             });
 
             // ═══════════════════════════════════════════════════════════════
@@ -1844,7 +1874,8 @@
             function deleteFrame(i) {
                 if (state.frames.length <= 1) return;
                 const frame = state.frames[i];
-                if (frame.referenceImage) URL.revokeObjectURL(frame.referenceImage.src);
+                if (frame.referenceImage)
+                    URL.revokeObjectURL(frame.referenceImage.src);
                 state.frames.splice(i, 1);
                 if (state.currentFrameIndex >= state.frames.length) {
                     state.currentFrameIndex = state.frames.length - 1;
