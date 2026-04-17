@@ -164,6 +164,8 @@
                 justify-content: center; /* centres the whole "6 FPS" unit */
                 gap: 4px; /* space between number and "FPS" text */
                 background: var(--blue);
+                border-top: 1px solid transparent;
+                border-bottom: 1px solid transparent;
                 border-left: 1px solid var(--white);
                 border-right: 1px solid var(--white);
                 width: 90px; /* fixed width so centering is meaningful */
@@ -175,26 +177,22 @@
                 transition:
                     background-color 0.1s,
                     color 0.1s,
-                    outline-color 0.1s;
-                outline: 1px solid transparent;
-                outline-offset: -1px;
-                z-index: 0;
+                    border-top-color 0.1s,
+                    border-bottom-color 0.1s;
             }
-            /* Hover: white background, blue text — signals it's clickable */
+            /* Hover: white background, blue top/bottom borders — left/right dividers stay white */
             #fps-group:hover {
                 background: var(--white);
-                outline-color: var(--blue);
-                z-index: 1;
+                border-top-color: var(--blue);
+                border-bottom-color: var(--blue);
             }
             #fps-group:hover #fps-num,
             #fps-group:hover #fps-label {
                 color: var(--blue);
             }
-            /* Focus-within (after click): return to blue, keep outline, text selected */
+            /* Focus-within (after click): return to blue, white text */
             #fps-group:focus-within {
                 background: var(--blue);
-                outline-color: var(--blue);
-                z-index: 1;
             }
             #fps-group:focus-within #fps-num,
             #fps-group:focus-within #fps-label {
@@ -1371,23 +1369,6 @@
                 ];
             }
 
-            // Normalise stroke direction so ants always march rightward (or downward
-            // for vertical strokes), regardless of which direction the user drew.
-            // Closed shapes (first point === last point) are left unchanged.
-            function normalizeStrokeDirection(points) {
-                if (points.length < 2) return points;
-                const first = points[0], last = points[points.length - 1];
-                // Skip closed shapes (start === end)
-                if (first.x === last.x && first.y === last.y) return points;
-                // Reverse if points[0] is to the right of (or below) points[last],
-                // so points[0] is always the leftmost/topmost end → ants march leftward,
-                // matching the counterclockwise direction of closed shapes.
-                if (first.x > last.x || (first.x === last.x && first.y > last.y)) {
-                    return [...points].reverse();
-                }
-                return points;
-            }
-
             function commitStroke(stroke) {
                 const idx = state.currentFrameIndex;
                 // Save snapshot before mutating
@@ -1395,9 +1376,7 @@
                     frameIndex: idx,
                     strokes: [...state.frames[idx].strokes],
                 });
-                state.frames[idx].strokes.push({
-                    points: normalizeStrokeDirection(stroke.points),
-                });
+                state.frames[idx].strokes.push(stroke);
                 updateUndoBtn();
             }
 
