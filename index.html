@@ -37,12 +37,26 @@
                 user-select: none;
             }
 
-            /* ── App wrapper — columns: toolbar / canvas / bottom-bar ────── */
+            /* ── App wrapper ─────────────────────────────────────────────── */
             #app {
                 display: flex;
                 flex-direction: column;
-                align-items: flex-start; /* each row sizes to its own content */
-                gap: 6px; /* breathing room between bar and canvas */
+                align-items: flex-start;
+            }
+
+            /* ── Canvas row: tool panel + canvas column side-by-side ─────── */
+            #canvas-row {
+                display: flex;
+                align-items: flex-start;
+                gap: 6px;
+            }
+
+            /* ── Canvas column: toolbar / canvas / bottom-bar ────────────── */
+            #canvas-column {
+                display: flex;
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 6px;
             }
 
             /* ── Toolbar (top bar) ───────────────────────────────────────── */
@@ -74,7 +88,7 @@
                    getPos() maps CSS coords → canvas coords automatically. */
                 width: min(
                     1920px,
-                    calc(100vw - 48px),
+                    calc(100vw - 99px),
                     calc((100vh - 146px) * (1920 / 1080))
                 );
                 aspect-ratio: 1920 / 1080;
@@ -375,40 +389,114 @@
                 padding: 0;
                 flex-shrink: 0;
             }
+
+            /* ── Tool panel (left of canvas) ─────────────────────────────── */
+            #tool-panel {
+                display: flex;
+                flex-direction: column;
+                background: var(--blue);
+                margin-top: 51px; /* skip toolbar (45px) + gap (6px) to align with canvas top */
+                flex-shrink: 0;
+            }
+
+            .tool-btn {
+                width: 45px;
+                height: 45px;
+                background: var(--blue);
+                border: none;
+                border-top: 1px solid var(--white);
+                border-bottom: 1px solid var(--white);
+                border-left: 1px solid transparent;
+                border-right: 1px solid transparent;
+                margin: -1px 0;
+                padding: 0;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                flex-shrink: 0;
+                outline: 1px solid transparent;
+                outline-offset: -1px;
+                position: relative;
+                z-index: 0;
+                transition: background-color 0.1s, outline-color 0.1s;
+            }
+            .tool-btn:first-child {
+                border-top-color: transparent;
+                margin-top: 0;
+            }
+            .tool-btn:last-child {
+                border-bottom-color: transparent;
+                margin-bottom: 0;
+            }
+            .tool-btn:hover,
+            .tool-btn.active {
+                background: var(--white);
+                outline-color: var(--blue);
+                z-index: 1;
+            }
+            .tool-btn img {
+                width: 22px;
+                height: 22px;
+                pointer-events: none;
+                filter: brightness(0) invert(1);
+            }
+            .tool-btn:hover img,
+            .tool-btn.active img {
+                filter: none;
+            }
         </style>
     </head>
     <body>
         <div id="app">
-            <!-- ── Toolbar ─────────────────────────────────────────────────── -->
-            <div id="toolbar">
-                <button id="clear-btn">Clear Frame</button>
-                <button id="ref-toggle-btn">Upload IMG</button>
-                <input
-                    type="file"
-                    id="ref-file"
-                    accept="image/*"
-                    multiple
-                    style="display: none"
-                />
-                <span id="ref-opacity-label" style="display: none"
-                    >Opacity</span
-                >
-                <input
-                    type="range"
-                    id="ref-opacity-slider"
-                    min="0"
-                    max="100"
-                    value="100"
-                    style="display: none"
-                />
-            </div>
+            <div id="canvas-row">
+                <!-- ── Tool panel ──────────────────────────────────────────── -->
+                <div id="tool-panel">
+                    <button class="tool-btn" id="tool-draw" title="Draw (D)">
+                        <img src="cursors/cursor_regular.svg" alt="Draw" />
+                    </button>
+                    <button class="tool-btn" id="tool-polyline" title="Polyline (P)">
+                        <img src="cursors/cursor_polyline.svg" alt="Polyline" />
+                    </button>
+                    <button class="tool-btn" id="tool-rect" title="Rectangle (R)">
+                        <img src="cursors/cursor_rectangle.svg" alt="Rectangle" />
+                    </button>
+                    <button class="tool-btn" id="tool-circle" title="Circle (C)">
+                        <img src="cursors/cursor_circle.svg" alt="Circle" />
+                    </button>
+                </div>
 
-            <!-- ── Canvas ─────────────────────────────────────────────────── -->
-            <div id="canvas-area">
-                <canvas id="main-canvas" width="800" height="600"></canvas>
-            </div>
+                <div id="canvas-column">
+                <!-- ── Toolbar ──────────────────────────────────────────────── -->
+                <div id="toolbar">
+                    <button id="clear-btn">Clear Frame</button>
+                    <button id="ref-toggle-btn">Upload IMG</button>
+                    <input
+                        type="file"
+                        id="ref-file"
+                        accept="image/*"
+                        multiple
+                        style="display: none"
+                    />
+                    <span id="ref-opacity-label" style="display: none"
+                        >Opacity</span
+                    >
+                    <input
+                        type="range"
+                        id="ref-opacity-slider"
+                        min="0"
+                        max="100"
+                        value="100"
+                        style="display: none"
+                    />
+                </div>
 
-            <!-- ── Bottom bar ──────────────────────────────────────────────── -->
+                <!-- ── Canvas ──────────────────────────────────────────────── -->
+                <div id="canvas-area">
+                    <canvas id="main-canvas" width="800" height="600"></canvas>
+                </div>
+
+                <!-- ── Bottom bar ──────────────────────────────────────────── -->
             <div id="bottom-bar">
                 <button id="onion-btn">Onion Skinning</button>
                 <div id="fps-group">
@@ -428,6 +516,8 @@
                 </button>
                 <button id="export-btn">Export</button>
             </div>
+                </div> <!-- #canvas-column -->
+            </div> <!-- #canvas-row -->
         </div>
         <!-- #app -->
 
@@ -784,23 +874,48 @@
             function updateCursor() {
                 if (state.isPlaying) {
                     canvas.style.cursor =
-                        'url("cursors/cursor_playing.svg") 16 16, default';
+                        'url("cursors/cursor_playing.svg") 11 11, default';
                 } else if (state.ellipseMode) {
                     canvas.style.cursor =
-                        'url("cursors/cursor_circle.svg") 16 16, crosshair';
+                        'url("cursors/cursor_circle.svg") 11 11, crosshair';
                 } else if (state.rectMode) {
                     canvas.style.cursor =
-                        'url("cursors/cursor_rectangle.svg") 16 16, crosshair';
+                        'url("cursors/cursor_rectangle.svg") 11 11, crosshair';
                 } else if (state.polylineActive) {
                     canvas.style.cursor =
-                        'url("cursors/cursor_polyline.svg") 16 16, crosshair';
+                        'url("cursors/cursor_polyline.svg") 11 11, crosshair';
                 } else if (state.eraserMode) {
                     canvas.style.cursor =
-                        'url("cursors/cursor_eraser.svg") 16 16, crosshair';
+                        'url("cursors/cursor_eraser.svg") 11 11, crosshair';
                 } else {
                     canvas.style.cursor =
-                        'url("cursors/cursor_regular.svg") 16 16, crosshair';
+                        'url("cursors/cursor_regular.svg") 11 11, crosshair';
                 }
+                updateToolButtons();
+            }
+
+            function updateToolButtons() {
+                // When eraser is temporarily held, reflect the underlying mode
+                const base =
+                    state.eraserMode && state._eraserPrevState
+                        ? state._eraserPrevState
+                        : state;
+                const isPolyline = base.polylineActive;
+                const isCircle = base.ellipseMode;
+                const isRect = base.rectMode;
+                const isDraw = !isPolyline && !isCircle && !isRect;
+                document
+                    .getElementById("tool-draw")
+                    .classList.toggle("active", isDraw);
+                document
+                    .getElementById("tool-polyline")
+                    .classList.toggle("active", isPolyline);
+                document
+                    .getElementById("tool-rect")
+                    .classList.toggle("active", isRect);
+                document
+                    .getElementById("tool-circle")
+                    .classList.toggle("active", isCircle);
             }
             updateCursor();
 
@@ -1110,6 +1225,9 @@
                     e.target.tagName === "INPUT" && e.target.type !== "range";
 
                 if (e.key === "Escape") {
+                    if (state.isPlaying) {
+                        togglePlay();
+                    }
                     if (state.polylineActive) {
                         state.previewStroke = null; // discard cursor-preview segment before finalising
                         finishPolyline(); // commit only the placed anchors
@@ -1262,7 +1380,14 @@
                             if (state.frames.length > 1) {
                                 deleteFrame(state.currentFrameIndex);
                             } else {
-                                clearFrame();
+                                const frame = state.frames[0];
+                                if (frame.referenceImage) {
+                                    URL.revokeObjectURL(frame.referenceImage.src);
+                                    frame.referenceImage = null;
+                                    updateImageToolbar();
+                                } else {
+                                    clearFrame();
+                                }
                             }
                         }
                     }
@@ -1418,9 +1543,53 @@
             function updateUndoBtn() {} // no-op: undo button removed, shortcut Cmd/Ctrl+Z still works
 
             document
-            document
                 .getElementById("clear-btn")
                 .addEventListener("click", clearFrame);
+
+            // ── Tool panel buttons ────────────────────────────────────────
+            document.getElementById("tool-draw").addEventListener("click", () => {
+                if (state.polylineActive) { state.previewStroke = null; finishPolyline(); }
+                state.panMode = false;
+                state.isPanning = false;
+                state.ellipseMode = false;
+                state.rectMode = false;
+                state.eraserMode = false;
+                state.previewStroke = null;
+                updateCursor();
+            });
+
+            document.getElementById("tool-polyline").addEventListener("click", () => {
+                if (state.polylineActive) {
+                    state.previewStroke = null;
+                    finishPolyline();
+                } else {
+                    state.ellipseMode = false;
+                    state.rectMode = false;
+                    state.eraserMode = false;
+                    state.previewStroke = null;
+                    state.polylineActive = true;
+                    state.polylinePoints = [];
+                    updateCursor();
+                }
+            });
+
+            document.getElementById("tool-rect").addEventListener("click", () => {
+                if (state.polylineActive) { state.previewStroke = null; finishPolyline(); }
+                state.rectMode = !state.rectMode;
+                state.ellipseMode = false;
+                state.eraserMode = false;
+                if (!state.rectMode) state.previewStroke = null;
+                updateCursor();
+            });
+
+            document.getElementById("tool-circle").addEventListener("click", () => {
+                if (state.polylineActive) { state.previewStroke = null; finishPolyline(); }
+                state.ellipseMode = !state.ellipseMode;
+                state.rectMode = false;
+                state.eraserMode = false;
+                if (!state.ellipseMode) state.previewStroke = null;
+                updateCursor();
+            });
             function toggleOnionSkin() {
                 state.onionSkin = !state.onionSkin;
                 const btn = document.getElementById("onion-btn");
