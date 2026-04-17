@@ -390,6 +390,7 @@
                     type="file"
                     id="ref-file"
                     accept="image/*"
+                    multiple
                     style="display: none"
                 />
                 <span id="ref-opacity-label" style="display: none"
@@ -438,7 +439,8 @@
             //  State
             // ═══════════════════════════════════════════════════════════════
             const state = {
-                frames: [{ strokes: [] }],
+                frames: [{ strokes: [], referenceImage: null }],
+                refOpacity: 1.0, // single global opacity for all reference images
                 currentFrameIndex: 0,
                 isPlaying: false,
                 fps: 6,
@@ -448,10 +450,6 @@
                 gapLength: 6, // gap length (px)
                 antSpeed: 36, // px/sec — 288/8: exactly 8 animation frames per loop
                 dashOffset: 0, // global animated offset (diagonal shift)
-
-                // Reference image (shared across all frames)
-                referenceImage: null,
-                refOpacity: 1.0,
 
                 // Drawing
                 isDrawing: false,
@@ -709,9 +707,10 @@
                 ctx.fillStyle = "#ffffff";
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-                // Reference image — 100% natural size, centred
-                if (state.referenceImage) {
-                    const img = state.referenceImage;
+                // Reference image — per-frame image, global opacity
+                const currentFrame = state.frames[state.currentFrameIndex];
+                if (currentFrame.referenceImage) {
+                    const img = currentFrame.referenceImage;
                     const rx = Math.round((canvas.width - img.width) / 2);
                     const ry = Math.round((canvas.height - img.height) / 2);
                     ctx.save();
@@ -1247,8 +1246,12 @@
                     }
                     if (e.key === "Backspace") {
                         e.preventDefault();
-                        if (!state.isPlaying && state.frames.length > 1) {
-                            deleteFrame(state.currentFrameIndex);
+                        if (!state.isPlaying) {
+                            if (state.frames.length > 1) {
+                                deleteFrame(state.currentFrameIndex);
+                            } else {
+                                clearFrame();
+                            }
                         }
                     }
                     if (e.key === "ArrowLeft") {
@@ -1368,6 +1371,23 @@
                 ];
             }
 
+            // Normalise stroke direction so ants always march rightward (or downward
+            // for vertical strokes), regardless of which direction the user drew.
+            // Closed shapes (first point === last point) are left unchanged.
+            function normalizeStrokeDirection(points) {
+                if (points.length < 2) return points;
+                const first = points[0], last = points[points.length - 1];
+                // Skip closed shapes (start === end)
+                if (first.x === last.x && first.y === last.y) return points;
+                // Reverse if points[0] is to the right of (or below) points[last],
+                // so points[0] is always the leftmost/topmost end → ants march leftward,
+                // matching the counterclockwise direction of closed shapes.
+                if (first.x > last.x || (first.x === last.x && first.y > last.y)) {
+                    return [...points].reverse();
+                }
+                return points;
+            }
+
             function commitStroke(stroke) {
                 const idx = state.currentFrameIndex;
                 // Save snapshot before mutating
@@ -1375,7 +1395,9 @@
                     frameIndex: idx,
                     strokes: [...state.frames[idx].strokes],
                 });
-                state.frames[idx].strokes.push(stroke);
+                state.frames[idx].strokes.push({
+                    points: normalizeStrokeDirection(stroke.points),
+                });
                 updateUndoBtn();
             }
 
@@ -1503,46 +1525,34 @@
                 fpsNum.focus();
             });
 
-            // Reference image — single toggle button
-            const toolbar = document.getElementById("toolbar");
+            // Reference image — single toggle button (per current frame)
             document
                 .getElementById("ref-toggle-btn")
                 .addEventListener("click", () => {
-                    if (state.referenceImage) {
-                        state.referenceImage = null;
+                    const anyImage = state.frames.some(f => f.referenceImage);
+                    if (anyImage) {
+                        state.frames.forEach(f => {
+                            if (f.referenceImage) {
+                                URL.revokeObjectURL(f.referenceImage.src);
+                                f.referenceImage = null;
+                            }
+                        });
                         document.getElementById("ref-file").value = "";
-                        document.getElementById("ref-toggle-btn").textContent =
-                            "Upload Image";
-                        document.getElementById(
-                            "ref-opacity-label",
-                        ).style.display = "none";
-                        document.getElementById(
-                            "ref-opacity-slider",
-                        ).style.display = "none";
-                        toolbar.classList.remove("has-opacity");
+                        updateImageToolbar();
                     } else {
                         document.getElementById("ref-file").click();
                     }
                 });
+            // Single file → current frame only; multiple files → import sequence
             document
                 .getElementById("ref-file")
                 .addEventListener("change", (e) => {
-                    const file = e.target.files[0];
-                    if (!file) return;
-                    const img = new Image();
-                    img.onload = () => {
-                        state.referenceImage = img;
-                        document.getElementById("ref-toggle-btn").textContent =
-                            "Remove Image";
-                        document.getElementById(
-                            "ref-opacity-label",
-                        ).style.display = "";
-                        document.getElementById(
-                            "ref-opacity-slider",
-                        ).style.display = "";
-                        toolbar.classList.add("has-opacity");
-                    };
-                    img.src = URL.createObjectURL(file);
+                    if (e.target.files.length === 1) {
+                        loadImageFile(e.target.files[0]);
+                    } else if (e.target.files.length > 1) {
+                        importSequence(e.target.files);
+                    }
+                    e.target.value = "";
                 });
             document
                 .getElementById("ref-opacity-slider")
@@ -1712,24 +1722,69 @@
                 .getElementById("export-btn")
                 .addEventListener("click", exportFrames);
 
+            // Sync the Upload/Remove button, opacity label, and slider to the current frame.
+            // Call whenever the active frame changes or its image is added/removed.
+            function updateImageToolbar() {
+                const frame = state.frames[state.currentFrameIndex];
+                const hasImage = !!frame.referenceImage;
+                const imageCount = state.frames.filter(f => f.referenceImage).length;
+                document.getElementById("ref-toggle-btn").textContent =
+                    imageCount > 1 ? "Remove Images" : hasImage ? "Remove Image" : "Upload Image";
+                document.getElementById("ref-opacity-label").style.display =
+                    hasImage ? "" : "none";
+                const slider = document.getElementById("ref-opacity-slider");
+                slider.style.display = hasImage ? "" : "none";
+                if (hasImage) slider.value = Math.round(state.refOpacity * 100);
+                document.getElementById("toolbar").classList.toggle("has-opacity", hasImage);
+            }
+
             // ── Drag-and-drop image onto canvas area ─────────────────────
             function loadImageFile(file) {
                 if (!file || !file.type.startsWith("image/")) return;
                 const img = new Image();
                 img.onload = () => {
-                    state.referenceImage = img;
-                    document.getElementById("ref-toggle-btn").textContent =
-                        "Clear Image";
-                    document.getElementById("ref-opacity-label").style.display =
-                        "";
-                    document.getElementById(
-                        "ref-opacity-slider",
-                    ).style.display = "";
-                    document
-                        .getElementById("toolbar")
-                        .classList.add("has-opacity");
+                    const frame = state.frames[state.currentFrameIndex];
+                    if (frame.referenceImage) URL.revokeObjectURL(frame.referenceImage.src);
+                    frame.referenceImage = img;
+                    updateImageToolbar();
                 };
                 img.src = URL.createObjectURL(file);
+            }
+
+            // Sort and assign multiple image files to frames (one per frame),
+            // auto-creating frames as needed up to 24.
+            function importSequence(files) {
+                const sorted = Array.from(files)
+                    .filter(f => f.type.startsWith("image/"))
+                    .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: "base" }));
+                if (!sorted.length) return;
+                const toLoad = sorted.slice(0, 24);
+
+                // Auto-create frames as needed, preserving existing strokes
+                while (state.frames.length < toLoad.length) {
+                    state.frames.push({ strokes: [], referenceImage: null });
+                }
+
+                // Revoke existing images on target frames
+                for (let i = 0; i < toLoad.length; i++) {
+                    if (state.frames[i].referenceImage) URL.revokeObjectURL(state.frames[i].referenceImage.src);
+                    state.frames[i].referenceImage = null;
+                }
+
+                // Navigate to frame 1 immediately
+                state.currentFrameIndex = 0;
+                buildStrip();
+                updateImageToolbar();
+
+                // Load images async into their target frame slots
+                toLoad.forEach((file, i) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        state.frames[i].referenceImage = img;
+                        if (i === state.currentFrameIndex) updateImageToolbar();
+                    };
+                    img.src = URL.createObjectURL(file);
+                });
             }
             const canvasArea = document.getElementById("canvas-area");
             canvasArea.addEventListener("dragover", (e) => {
@@ -1796,22 +1851,27 @@
             function selectFrame(i) {
                 state.currentFrameIndex = i;
                 highlightActiveFrame();
+                updateImageToolbar();
             }
 
             function addFrame() {
                 if (state.frames.length >= 24) return;
-                state.frames.push({ strokes: [] });
+                state.frames.push({ strokes: [], referenceImage: null });
                 state.currentFrameIndex = state.frames.length - 1;
                 buildStrip();
+                updateImageToolbar();
             }
 
             function deleteFrame(i) {
                 if (state.frames.length <= 1) return;
+                const frame = state.frames[i];
+                if (frame.referenceImage) URL.revokeObjectURL(frame.referenceImage.src);
                 state.frames.splice(i, 1);
                 if (state.currentFrameIndex >= state.frames.length) {
                     state.currentFrameIndex = state.frames.length - 1;
                 }
                 buildStrip();
+                updateImageToolbar();
             }
 
             document
