@@ -419,7 +419,9 @@
                 outline-offset: -1px;
                 position: relative;
                 z-index: 0;
-                transition: background-color 0.1s, outline-color 0.1s;
+                transition:
+                    background-color 0.1s,
+                    outline-color 0.1s;
             }
             .tool-btn:first-child {
                 border-top-color: transparent;
@@ -436,8 +438,6 @@
                 z-index: 1;
             }
             .tool-btn img {
-                width: 22px;
-                height: 22px;
                 pointer-events: none;
                 filter: brightness(0) invert(1);
             }
@@ -455,69 +455,92 @@
                     <button class="tool-btn" id="tool-draw" title="Draw (D)">
                         <img src="cursors/cursor_regular.svg" alt="Draw" />
                     </button>
-                    <button class="tool-btn" id="tool-polyline" title="Polyline (P)">
+                    <button
+                        class="tool-btn"
+                        id="tool-polyline"
+                        title="Polyline (P)"
+                    >
                         <img src="cursors/cursor_polyline.svg" alt="Polyline" />
                     </button>
-                    <button class="tool-btn" id="tool-rect" title="Rectangle (R)">
-                        <img src="cursors/cursor_rectangle.svg" alt="Rectangle" />
+                    <button
+                        class="tool-btn"
+                        id="tool-rect"
+                        title="Rectangle (R)"
+                    >
+                        <img
+                            src="cursors/cursor_rectangle.svg"
+                            alt="Rectangle"
+                        />
                     </button>
-                    <button class="tool-btn" id="tool-circle" title="Circle (C)">
+                    <button
+                        class="tool-btn"
+                        id="tool-circle"
+                        title="Circle (C)"
+                    >
                         <img src="cursors/cursor_circle.svg" alt="Circle" />
                     </button>
                 </div>
 
                 <div id="canvas-column">
-                <!-- ── Toolbar ──────────────────────────────────────────────── -->
-                <div id="toolbar">
-                    <button id="clear-btn">Clear Frame</button>
-                    <button id="ref-toggle-btn">Upload IMG</button>
-                    <input
-                        type="file"
-                        id="ref-file"
-                        accept="image/*"
-                        multiple
-                        style="display: none"
-                    />
-                    <span id="ref-opacity-label" style="display: none"
-                        >Opacity</span
-                    >
-                    <input
-                        type="range"
-                        id="ref-opacity-slider"
-                        min="0"
-                        max="100"
-                        value="100"
-                        style="display: none"
-                    />
-                </div>
+                    <!-- ── Toolbar ──────────────────────────────────────────────── -->
+                    <div id="toolbar">
+                        <button id="clear-btn">Clear Frame</button>
+                        <button id="ref-toggle-btn">Upload IMG</button>
+                        <input
+                            type="file"
+                            id="ref-file"
+                            accept="image/*"
+                            multiple
+                            style="display: none"
+                        />
+                        <span id="ref-opacity-label" style="display: none"
+                            >Opacity</span
+                        >
+                        <input
+                            type="range"
+                            id="ref-opacity-slider"
+                            min="0"
+                            max="100"
+                            value="100"
+                            style="display: none"
+                        />
+                    </div>
 
-                <!-- ── Canvas ──────────────────────────────────────────────── -->
-                <div id="canvas-area">
-                    <canvas id="main-canvas" width="800" height="600"></canvas>
-                </div>
+                    <!-- ── Canvas ──────────────────────────────────────────────── -->
+                    <div id="canvas-area">
+                        <canvas
+                            id="main-canvas"
+                            width="800"
+                            height="600"
+                        ></canvas>
+                    </div>
 
-                <!-- ── Bottom bar ──────────────────────────────────────────── -->
-            <div id="bottom-bar">
-                <button id="onion-btn">Onion Skinning</button>
-                <div id="fps-group">
-                    <input
-                        type="number"
-                        id="fps-num"
-                        min="1"
-                        max="24"
-                        value="6"
-                    />
-                    <span id="fps-label">FPS</span>
+                    <!-- ── Bottom bar ──────────────────────────────────────────── -->
+                    <div id="bottom-bar">
+                        <button id="onion-btn">Onion Skinning</button>
+                        <div id="fps-group">
+                            <input
+                                type="number"
+                                id="fps-num"
+                                min="1"
+                                max="24"
+                                value="6"
+                            />
+                            <span id="fps-label">FPS</span>
+                        </div>
+                        <button id="play-btn" title="Play / Pause  (Space)">
+                            ▶
+                        </button>
+                        <!-- frame tabs injected here by buildStrip() -->
+                        <button id="add-frame-btn" title="Add frame  (max 24)">
+                            +
+                        </button>
+                        <button id="export-btn">Export</button>
+                    </div>
                 </div>
-                <button id="play-btn" title="Play / Pause  (Space)">▶</button>
-                <!-- frame tabs injected here by buildStrip() -->
-                <button id="add-frame-btn" title="Add frame  (max 24)">
-                    +
-                </button>
-                <button id="export-btn">Export</button>
+                <!-- #canvas-column -->
             </div>
-                </div> <!-- #canvas-column -->
-            </div> <!-- #canvas-row -->
+            <!-- #canvas-row -->
         </div>
         <!-- #app -->
 
@@ -874,22 +897,22 @@
             function updateCursor() {
                 if (state.isPlaying) {
                     canvas.style.cursor =
-                        'url("cursors/cursor_playing.svg") 11 11, default';
+                        'url("cursors/cursor_playing.svg") 12 12, default';
                 } else if (state.ellipseMode) {
                     canvas.style.cursor =
-                        'url("cursors/cursor_circle.svg") 11 11, crosshair';
+                        'url("cursors/cursor_circle.svg") 12 12, crosshair';
                 } else if (state.rectMode) {
                     canvas.style.cursor =
-                        'url("cursors/cursor_rectangle.svg") 11 11, crosshair';
+                        'url("cursors/cursor_rectangle.svg") 12 12, crosshair';
                 } else if (state.polylineActive) {
                     canvas.style.cursor =
-                        'url("cursors/cursor_polyline.svg") 11 11, crosshair';
+                        'url("cursors/cursor_polyline.svg") 12 12, crosshair';
                 } else if (state.eraserMode) {
                     canvas.style.cursor =
-                        'url("cursors/cursor_eraser.svg") 11 11, crosshair';
+                        'url("cursors/cursor_eraser.svg") 12 12, crosshair';
                 } else {
                     canvas.style.cursor =
-                        'url("cursors/cursor_regular.svg") 11 11, crosshair';
+                        'url("cursors/cursor_regular.svg") 12 12, crosshair';
                 }
                 updateToolButtons();
             }
@@ -1039,7 +1062,7 @@
 
                 // ── Eraser mode: remove strokes within radius of cursor ────────
                 if (state.eraserMode && state._eraserSnapshot !== null) {
-                    const RADIUS = 20; // canvas-space pixels
+                    const RADIUS = 10; // canvas-space pixels
                     const R2 = RADIUS * RADIUS;
                     const idx = state.currentFrameIndex;
                     const before = state.frames[idx].strokes.length;
@@ -1108,10 +1131,7 @@
                         points: [{ ...state.mouseDownPos }, { ...pos }],
                     };
                 } else if (state.drawMode === "ellipse") {
-                    const pts = ellipsePoints(
-                        state.mouseDownPos,
-                        pos,
-                    );
+                    const pts = ellipsePoints(state.mouseDownPos, pos);
                     state.previewStroke = pts.length ? { points: pts } : null;
                 } else if (state.drawMode === "rect") {
                     const pts = rectPoints(state.mouseDownPos, pos, e.shiftKey);
@@ -1382,7 +1402,9 @@
                             } else {
                                 const frame = state.frames[0];
                                 if (frame.referenceImage) {
-                                    URL.revokeObjectURL(frame.referenceImage.src);
+                                    URL.revokeObjectURL(
+                                        frame.referenceImage.src,
+                                    );
                                     frame.referenceImage = null;
                                     updateImageToolbar();
                                     clearFrame();
@@ -1465,10 +1487,12 @@
             // ═══════════════════════════════════════════════════════════════
             function ellipsePoints(p0, p1) {
                 // Always a perfect circle — radius is the smaller of the two axes
-                const r = Math.min(Math.abs(p1.x - p0.x), Math.abs(p1.y - p0.y)) / 2;
+                const r =
+                    Math.min(Math.abs(p1.x - p0.x), Math.abs(p1.y - p0.y)) / 2;
                 const cx = p0.x + Math.sign(p1.x - p0.x) * r;
                 const cy = p0.y + Math.sign(p1.y - p0.y) * r;
-                const rx = r, ry = r;
+                const rx = r,
+                    ry = r;
                 if (rx < 1) return [];
                 const N = 64;
                 const pts = [];
@@ -1548,49 +1572,66 @@
                 .addEventListener("click", clearFrame);
 
             // ── Tool panel buttons ────────────────────────────────────────
-            document.getElementById("tool-draw").addEventListener("click", () => {
-                if (state.polylineActive) { state.previewStroke = null; finishPolyline(); }
-                state.panMode = false;
-                state.isPanning = false;
-                state.ellipseMode = false;
-                state.rectMode = false;
-                state.eraserMode = false;
-                state.previewStroke = null;
-                updateCursor();
-            });
-
-            document.getElementById("tool-polyline").addEventListener("click", () => {
-                if (state.polylineActive) {
-                    state.previewStroke = null;
-                    finishPolyline();
-                } else {
+            document
+                .getElementById("tool-draw")
+                .addEventListener("click", () => {
+                    if (state.polylineActive) {
+                        state.previewStroke = null;
+                        finishPolyline();
+                    }
+                    state.panMode = false;
+                    state.isPanning = false;
                     state.ellipseMode = false;
                     state.rectMode = false;
                     state.eraserMode = false;
                     state.previewStroke = null;
-                    state.polylineActive = true;
-                    state.polylinePoints = [];
                     updateCursor();
-                }
-            });
+                });
 
-            document.getElementById("tool-rect").addEventListener("click", () => {
-                if (state.polylineActive) { state.previewStroke = null; finishPolyline(); }
-                state.rectMode = !state.rectMode;
-                state.ellipseMode = false;
-                state.eraserMode = false;
-                if (!state.rectMode) state.previewStroke = null;
-                updateCursor();
-            });
+            document
+                .getElementById("tool-polyline")
+                .addEventListener("click", () => {
+                    if (state.polylineActive) {
+                        state.previewStroke = null;
+                        finishPolyline();
+                    } else {
+                        state.ellipseMode = false;
+                        state.rectMode = false;
+                        state.eraserMode = false;
+                        state.previewStroke = null;
+                        state.polylineActive = true;
+                        state.polylinePoints = [];
+                        updateCursor();
+                    }
+                });
 
-            document.getElementById("tool-circle").addEventListener("click", () => {
-                if (state.polylineActive) { state.previewStroke = null; finishPolyline(); }
-                state.ellipseMode = !state.ellipseMode;
-                state.rectMode = false;
-                state.eraserMode = false;
-                if (!state.ellipseMode) state.previewStroke = null;
-                updateCursor();
-            });
+            document
+                .getElementById("tool-rect")
+                .addEventListener("click", () => {
+                    if (state.polylineActive) {
+                        state.previewStroke = null;
+                        finishPolyline();
+                    }
+                    state.rectMode = !state.rectMode;
+                    state.ellipseMode = false;
+                    state.eraserMode = false;
+                    if (!state.rectMode) state.previewStroke = null;
+                    updateCursor();
+                });
+
+            document
+                .getElementById("tool-circle")
+                .addEventListener("click", () => {
+                    if (state.polylineActive) {
+                        state.previewStroke = null;
+                        finishPolyline();
+                    }
+                    state.ellipseMode = !state.ellipseMode;
+                    state.rectMode = false;
+                    state.eraserMode = false;
+                    if (!state.ellipseMode) state.previewStroke = null;
+                    updateCursor();
+                });
             function toggleOnionSkin() {
                 state.onionSkin = !state.onionSkin;
                 const btn = document.getElementById("onion-btn");
@@ -1690,11 +1731,13 @@
                 .addEventListener("click", () => {
                     const anyImage = state.frames.some((f) => f.referenceImage);
                     if (anyImage) {
+                        const revoked = new Set();
                         state.frames.forEach((f) => {
-                            if (f.referenceImage) {
+                            if (f.referenceImage && !revoked.has(f.referenceImage.src)) {
+                                revoked.add(f.referenceImage.src);
                                 URL.revokeObjectURL(f.referenceImage.src);
-                                f.referenceImage = null;
                             }
+                            f.referenceImage = null;
                         });
                         document.getElementById("ref-file").value = "";
                         updateImageToolbar();
@@ -1905,10 +1948,19 @@
                 if (!file || !file.type.startsWith("image/")) return;
                 const img = new Image();
                 img.onload = () => {
-                    const frame = state.frames[state.currentFrameIndex];
-                    if (frame.referenceImage)
-                        URL.revokeObjectURL(frame.referenceImage.src);
-                    frame.referenceImage = img;
+                    // Revoke all existing reference images (deduplicated by URL)
+                    const revoked = new Set();
+                    state.frames.forEach((f) => {
+                        if (f.referenceImage && !revoked.has(f.referenceImage.src)) {
+                            revoked.add(f.referenceImage.src);
+                            URL.revokeObjectURL(f.referenceImage.src);
+                        }
+                    });
+                    // Stamp the new image onto every frame
+                    state.frames.forEach((f) => {
+                        f.referenceImage = img;
+                    });
+                    state.refOpacity = 1.0;
                     updateImageToolbar();
                 };
                 img.src = URL.createObjectURL(file);
@@ -1933,24 +1985,36 @@
                     state.frames.push({ strokes: [], referenceImage: null });
                 }
 
-                // Revoke existing images on target frames
-                for (let i = 0; i < toLoad.length; i++) {
-                    if (state.frames[i].referenceImage)
-                        URL.revokeObjectURL(state.frames[i].referenceImage.src);
-                    state.frames[i].referenceImage = null;
-                }
+                // Revoke all existing images across all frames (deduped)
+                const revoked = new Set();
+                state.frames.forEach((f) => {
+                    if (f.referenceImage && !revoked.has(f.referenceImage.src)) {
+                        revoked.add(f.referenceImage.src);
+                        URL.revokeObjectURL(f.referenceImage.src);
+                    }
+                    f.referenceImage = null;
+                });
 
                 // Navigate to frame 1 immediately
                 state.currentFrameIndex = 0;
                 buildStrip();
                 updateImageToolbar();
 
-                // Load images async into their target frame slots
+                // Load images async; once all done, fill extra frames with the last image
+                let loadedCount = 0;
                 toLoad.forEach((file, i) => {
                     const img = new Image();
                     img.onload = () => {
                         state.frames[i].referenceImage = img;
+                        loadedCount++;
                         if (i === state.currentFrameIndex) updateImageToolbar();
+                        if (loadedCount === toLoad.length) {
+                            const lastImg = state.frames[toLoad.length - 1].referenceImage;
+                            for (let j = toLoad.length; j < state.frames.length; j++) {
+                                state.frames[j].referenceImage = lastImg;
+                            }
+                            if (state.currentFrameIndex >= toLoad.length) updateImageToolbar();
+                        }
                     };
                     img.src = URL.createObjectURL(file);
                 });
@@ -2035,7 +2099,8 @@
 
             function addFrame() {
                 if (state.frames.length >= 24) return;
-                state.frames.push({ strokes: [], referenceImage: null });
+                const lastImg = state.frames[state.frames.length - 1].referenceImage;
+                state.frames.push({ strokes: [], referenceImage: lastImg || null });
                 state.currentFrameIndex = state.frames.length - 1;
                 buildStrip();
                 updateImageToolbar();
@@ -2043,10 +2108,11 @@
 
             function deleteFrame(i) {
                 if (state.frames.length <= 1) return;
-                const frame = state.frames[i];
-                if (frame.referenceImage)
-                    URL.revokeObjectURL(frame.referenceImage.src);
+                const img = state.frames[i].referenceImage;
+                state.frames[i].referenceImage = null;
                 state.frames.splice(i, 1);
+                if (img && !state.frames.some((f) => f.referenceImage === img))
+                    URL.revokeObjectURL(img.src);
                 if (state.currentFrameIndex >= state.frames.length) {
                     state.currentFrameIndex = state.frames.length - 1;
                 }
