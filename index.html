@@ -6,7 +6,7 @@
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
         <link
-            href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap"
+            href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;500&display=swap"
             rel="stylesheet"
         />
         <title>Marching Ants</title>
@@ -26,7 +26,7 @@
             body {
                 background: #ffffff;
                 color: var(--white);
-                font-family: "Roboto", sans-serif;
+                font-family: "Roboto Mono", monospace;
                 font-size: 13px;
                 display: flex;
                 flex-direction: column;
@@ -114,8 +114,8 @@
                 border-left: 1px solid var(--white);
                 border-right: 1px solid var(--white);
                 color: var(--white);
-                padding: 0 16px;
-                font-family: "Roboto", sans-serif;
+                padding: 0 12px;
+                font-family: "Roboto Mono", monospace;
                 font-size: 13px;
                 font-weight: 400;
                 cursor: pointer;
@@ -182,9 +182,8 @@
                 border-bottom: 1px solid transparent;
                 border-left: 1px solid var(--white);
                 border-right: 1px solid var(--white);
-                width: 90px; /* fixed width so centering is meaningful */
                 margin: 0 -1px;
-                padding: 0;
+                padding: 0 12px;
                 flex-shrink: 0;
                 position: relative;
                 cursor: pointer;
@@ -217,7 +216,7 @@
                 background: transparent;
                 border: none;
                 color: var(--white);
-                font-family: "Roboto", sans-serif;
+                font-family: "Roboto Mono", monospace;
                 font-size: 13px;
                 font-weight: 400;
                 /* shrink the input box to exactly fit its text content,
@@ -241,7 +240,7 @@
 
             #fps-label {
                 color: var(--white);
-                font-family: "Roboto", sans-serif;
+                font-family: "Roboto Mono", monospace;
                 font-size: 13px;
                 font-weight: 400;
                 padding: 0; /* gap handled by #fps-group's gap property */
@@ -252,7 +251,7 @@
             /* ── Opacity slider ──────────────────────────────────────────── */
             #ref-opacity-label {
                 color: var(--white);
-                font-family: "Roboto", sans-serif;
+                font-family: "Roboto Mono", monospace;
                 font-size: 13px;
                 font-weight: 400;
                 padding: 0 0 0 14px;
@@ -292,7 +291,7 @@
                 color: var(--white);
                 width: 45px;
                 height: 100%;
-                font-family: "Roboto", sans-serif;
+                font-family: "Roboto Mono", monospace;
                 font-size: 13px;
                 font-weight: 400;
                 cursor: pointer;
@@ -348,8 +347,7 @@
                 pointer-events: none;
                 transition: opacity 0.1s;
             }
-            .frame-tab:hover .tab-del,
-            .frame-tab.active .tab-del {
+            .frame-tab:hover .tab-del {
                 opacity: 1;
                 pointer-events: auto;
             }
@@ -375,6 +373,13 @@
             #onion-btn {
                 border-left: none;
                 margin: 0 -1px 0 0;
+            }
+
+            /* add-frame button: square like frame tabs */
+            #add-frame-btn {
+                width: 45px;
+                padding: 0;
+                flex-shrink: 0;
             }
 
             /* last element in bottom bar — no right border */
@@ -1733,7 +1738,10 @@
                     if (anyImage) {
                         const revoked = new Set();
                         state.frames.forEach((f) => {
-                            if (f.referenceImage && !revoked.has(f.referenceImage.src)) {
+                            if (
+                                f.referenceImage &&
+                                !revoked.has(f.referenceImage.src)
+                            ) {
                                 revoked.add(f.referenceImage.src);
                                 URL.revokeObjectURL(f.referenceImage.src);
                             }
@@ -1851,7 +1859,6 @@
             async function exportFrames() {
                 const btn = document.getElementById("export-btn");
                 btn.disabled = true;
-                btn.textContent = "Exporting…";
                 try {
                     // Always export at the canvas's native resolution (1920×1080).
                     // Reference images are display-only overlays and don't affect output size.
@@ -1903,7 +1910,6 @@
                             name: `frame_${String(k + 1).padStart(4, "0")}.png`,
                             data: new Uint8Array(ab),
                         });
-                        btn.textContent = `${k + 1} / ${totalFrames}`;
                     }
 
                     const zip = buildZip(files);
@@ -1916,7 +1922,6 @@
                     setTimeout(() => URL.revokeObjectURL(a.href), 5000);
                 } finally {
                     btn.disabled = false;
-                    btn.textContent = "Export";
                 }
             }
 
@@ -1951,7 +1956,10 @@
                     // Revoke all existing reference images (deduplicated by URL)
                     const revoked = new Set();
                     state.frames.forEach((f) => {
-                        if (f.referenceImage && !revoked.has(f.referenceImage.src)) {
+                        if (
+                            f.referenceImage &&
+                            !revoked.has(f.referenceImage.src)
+                        ) {
                             revoked.add(f.referenceImage.src);
                             URL.revokeObjectURL(f.referenceImage.src);
                         }
@@ -1988,7 +1996,10 @@
                 // Revoke all existing images across all frames (deduped)
                 const revoked = new Set();
                 state.frames.forEach((f) => {
-                    if (f.referenceImage && !revoked.has(f.referenceImage.src)) {
+                    if (
+                        f.referenceImage &&
+                        !revoked.has(f.referenceImage.src)
+                    ) {
                         revoked.add(f.referenceImage.src);
                         URL.revokeObjectURL(f.referenceImage.src);
                     }
@@ -2009,11 +2020,17 @@
                         loadedCount++;
                         if (i === state.currentFrameIndex) updateImageToolbar();
                         if (loadedCount === toLoad.length) {
-                            const lastImg = state.frames[toLoad.length - 1].referenceImage;
-                            for (let j = toLoad.length; j < state.frames.length; j++) {
+                            const lastImg =
+                                state.frames[toLoad.length - 1].referenceImage;
+                            for (
+                                let j = toLoad.length;
+                                j < state.frames.length;
+                                j++
+                            ) {
                                 state.frames[j].referenceImage = lastImg;
                             }
-                            if (state.currentFrameIndex >= toLoad.length) updateImageToolbar();
+                            if (state.currentFrameIndex >= toLoad.length)
+                                updateImageToolbar();
                         }
                     };
                     img.src = URL.createObjectURL(file);
@@ -2099,8 +2116,12 @@
 
             function addFrame() {
                 if (state.frames.length >= 24) return;
-                const lastImg = state.frames[state.frames.length - 1].referenceImage;
-                state.frames.push({ strokes: [], referenceImage: lastImg || null });
+                const lastImg =
+                    state.frames[state.frames.length - 1].referenceImage;
+                state.frames.push({
+                    strokes: [],
+                    referenceImage: lastImg || null,
+                });
                 state.currentFrameIndex = state.frames.length - 1;
                 buildStrip();
                 updateImageToolbar();
