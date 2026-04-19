@@ -458,14 +458,14 @@
                 <!-- ── Tool panel ──────────────────────────────────────────── -->
                 <div id="tool-panel">
                     <button class="tool-btn" id="tool-draw" title="Draw (D)">
-                        <img src="cursors/cursor_regular.svg" alt="Draw" />
+                        <img src="cursors/new_cursor_draw.svg" alt="Draw" />
                     </button>
                     <button
                         class="tool-btn"
                         id="tool-polyline"
                         title="Polyline (P)"
                     >
-                        <img src="cursors/cursor_polyline.svg" alt="Polyline" />
+                        <img src="cursors/new_cursor_poly.svg" alt="Polyline" />
                     </button>
                     <button
                         class="tool-btn"
@@ -473,7 +473,7 @@
                         title="Rectangle (R)"
                     >
                         <img
-                            src="cursors/cursor_rectangle.svg"
+                            src="cursors/new_cursor_square.svg"
                             alt="Rectangle"
                         />
                     </button>
@@ -482,7 +482,7 @@
                         id="tool-circle"
                         title="Circle (C)"
                     >
-                        <img src="cursors/cursor_circle.svg" alt="Circle" />
+                        <img src="cursors/new_cursor_circle.svg" alt="Circle" />
                     </button>
                 </div>
 
@@ -900,24 +900,12 @@
             //  Cursor management
             // ═══════════════════════════════════════════════════════════════
             function updateCursor() {
-                if (state.isPlaying) {
+                if (state.eraserMode) {
                     canvas.style.cursor =
-                        'url("cursors/cursor_playing.svg") 12 12, default';
-                } else if (state.ellipseMode) {
-                    canvas.style.cursor =
-                        'url("cursors/cursor_circle.svg") 12 12, crosshair';
-                } else if (state.rectMode) {
-                    canvas.style.cursor =
-                        'url("cursors/cursor_rectangle.svg") 12 12, crosshair';
-                } else if (state.polylineActive) {
-                    canvas.style.cursor =
-                        'url("cursors/cursor_polyline.svg") 12 12, crosshair';
-                } else if (state.eraserMode) {
-                    canvas.style.cursor =
-                        'url("cursors/cursor_eraser.svg") 12 12, crosshair';
+                        'url("cursors/new_cursor_erase.svg") 9 9, crosshair';
                 } else {
                     canvas.style.cursor =
-                        'url("cursors/cursor_regular.svg") 12 12, crosshair';
+                        'url("cursors/new_cursor_regular.svg") 12 12, crosshair';
                 }
                 updateToolButtons();
             }
