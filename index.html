@@ -388,12 +388,16 @@
                 margin: 0 0 0 -1px;
             }
 
-            /* Play button: fixed width so ▶ and ⏸ don't shift layout */
+            /* Play button: square, SVG icons toggled via .playing class */
             #play-btn {
                 width: 45px;
                 padding: 0;
                 flex-shrink: 0;
             }
+            #play-btn svg { pointer-events: none; }
+            #play-btn .icon-pause { display: none; }
+            #play-btn.playing .icon-play { display: none; }
+            #play-btn.playing .icon-pause { display: block; }
 
             /* ── Tool panel (left of canvas) ─────────────────────────────── */
             #tool-panel {
@@ -534,7 +538,13 @@
                             <span id="fps-label">FPS</span>
                         </div>
                         <button id="play-btn" title="Play / Pause  (Space)">
-                            ▶
+                            <svg class="icon-play" width="45" height="45" viewBox="0 0 45 45" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M32 22.5L14 32.8923L14 12.1077L32 22.5Z" fill="currentColor"/>
+                            </svg>
+                            <svg class="icon-pause" width="45" height="45" viewBox="0 0 45 45" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <rect x="14" y="12.5" width="6" height="20" fill="currentColor"/>
+                                <rect x="24" y="12.5" width="6" height="20" fill="currentColor"/>
+                            </svg>
                         </button>
                         <!-- frame tabs injected here by buildStrip() -->
                         <button id="add-frame-btn" title="Add frame  (max 24)">
@@ -1676,7 +1686,6 @@
                 state.isPlaying = !state.isPlaying;
                 state.frameTimer = 0;
                 const btn = document.getElementById("play-btn");
-                btn.textContent = state.isPlaying ? "⏸" : "▶";
                 btn.classList.toggle("playing", state.isPlaying);
                 document
                     .getElementById("bottom-bar")
