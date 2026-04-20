@@ -461,7 +461,7 @@
             <div id="canvas-row">
                 <!-- ── Tool panel ──────────────────────────────────────────── -->
                 <div id="tool-panel">
-                    <button class="tool-btn" id="tool-draw" title="Draw (D)">
+                    <button class="tool-btn" id="tool-draw" title="Draw">
                         <img src="cursors/new_cursor_draw.svg" alt="Draw" />
                     </button>
                     <button
@@ -1220,14 +1220,15 @@
                 state.mouseDownPos = null;
             });
 
-            // dblclick closes the shape (connects back to first point) and commits
+            // dblclick: commits the previewed segment, closes shape to first point, commits
             canvas.addEventListener("dblclick", (e) => {
                 if (!state.polylineActive) return;
-                // Both mousedowns of the dblclick added a point — remove them both
-                if (state.polylinePoints.length > 0) state.polylinePoints.pop();
+                // The first mousedown committed the previewed segment; remove only the
+                // spurious duplicate point added by the second mousedown of the dblclick
                 if (state.polylinePoints.length > 0) state.polylinePoints.pop();
                 state.previewStroke = null;
-                if (state.polylinePoints.length >= 3) {
+                // Close the shape by connecting back to the first anchor
+                if (state.polylinePoints.length >= 2) {
                     state.polylinePoints.push({ ...state.polylinePoints[0] });
                 }
                 commitPolyline(); // commit closed shape, stay in polyline mode
@@ -1305,17 +1306,7 @@
                     }
                     if (e.key === "d" || e.key === "D") {
                         e.preventDefault();
-                        if (state.polylineActive) {
-                            state.previewStroke = null;
-                            finishPolyline();
-                        }
-                        state.panMode = false;
-                        state.isPanning = false;
-                        state.ellipseMode = false;
-                        state.rectMode = false;
-                        state.eraserMode = false;
-                        state.previewStroke = null;
-                        updateCursor();
+                        if (!state.isPlaying) duplicateFrame();
                     }
                     if (e.key === "p" || e.key === "P") {
                         e.preventDefault();
@@ -2121,6 +2112,22 @@
                     referenceImage: lastImg || null,
                 });
                 state.currentFrameIndex = state.frames.length - 1;
+                buildStrip();
+                updateImageToolbar();
+            }
+
+            function duplicateFrame() {
+                if (state.frames.length >= 24) return;
+                const idx = state.currentFrameIndex;
+                const src = state.frames[idx];
+                const copy = {
+                    strokes: src.strokes.map((s) => ({
+                        points: s.points.map((p) => ({ ...p })),
+                    })),
+                    referenceImage: src.referenceImage, // shared reference, no new blob needed
+                };
+                state.frames.splice(idx + 1, 0, copy);
+                state.currentFrameIndex = idx + 1;
                 buildStrip();
                 updateImageToolbar();
             }
