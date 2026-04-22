@@ -463,7 +463,7 @@
             <div id="canvas-row">
                 <!-- ── Tool panel ──────────────────────────────────────────── -->
                 <div id="tool-panel">
-                    <button class="tool-btn" id="tool-draw" title="Draw">
+                    <button class="tool-btn" id="tool-draw" title="Draw (D)">
                         <img src="cursors/new_cursor_draw.svg" alt="Draw" />
                     </button>
                     <button
@@ -1280,7 +1280,8 @@
                     if (
                         state.isDrawing &&
                         (state.drawMode === "ellipse" ||
-                            state.drawMode === "rect")
+                            state.drawMode === "rect" ||
+                            state.drawMode === "line")
                     ) {
                         // Start repositioning the shape
                         state.spaceRepositioning = true;
@@ -1295,6 +1296,10 @@
                     e.preventDefault();
                     undo();
                 }
+                if ((e.ctrlKey || e.metaKey) && e.key === "d") {
+                    e.preventDefault();
+                    if (!state.isPlaying) duplicateFrame();
+                }
                 if (!inInput && !e.ctrlKey && !e.metaKey && !e.altKey) {
                     if (e.key === "h" || e.key === "H") {
                         e.preventDefault();
@@ -1308,7 +1313,17 @@
                     }
                     if (e.key === "d" || e.key === "D") {
                         e.preventDefault();
-                        if (!state.isPlaying) duplicateFrame();
+                        if (state.polylineActive) {
+                            state.previewStroke = null;
+                            finishPolyline();
+                        }
+                        state.panMode = false;
+                        state.isPanning = false;
+                        state.ellipseMode = false;
+                        state.rectMode = false;
+                        state.eraserMode = false;
+                        state.previewStroke = null;
+                        updateCursor();
                     }
                     if (e.key === "p" || e.key === "P") {
                         e.preventDefault();
