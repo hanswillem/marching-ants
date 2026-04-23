@@ -205,9 +205,13 @@
             #fps-group:hover #fps-label {
                 color: var(--blue);
             }
-            /* Focus-within (after click): return to blue, white text */
+            /* Focus-within (after click): return to blue, white text, restore borders */
             #fps-group:focus-within {
                 background: var(--blue);
+                border-top-color: transparent;
+                border-bottom-color: transparent;
+                border-left-color: var(--white);
+                border-right-color: var(--white);
             }
             #fps-group:focus-within #fps-num,
             #fps-group:focus-within #fps-label {
