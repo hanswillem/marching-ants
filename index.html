@@ -467,20 +467,20 @@
             <div id="canvas-row">
                 <!-- ── Tool panel ──────────────────────────────────────────── -->
                 <div id="tool-panel">
-                    <button class="tool-btn" id="tool-draw" title="Draw (D)">
+                    <button class="tool-btn" id="tool-draw" title="Draw (1)">
                         <img src="cursors/new_cursor_draw.svg" alt="Draw" />
                     </button>
                     <button
                         class="tool-btn"
                         id="tool-polyline"
-                        title="Polyline (P)"
+                        title="Polyline (2)"
                     >
                         <img src="cursors/new_cursor_poly.svg" alt="Polyline" />
                     </button>
                     <button
                         class="tool-btn"
                         id="tool-rect"
-                        title="Rectangle (R)"
+                        title="Rectangle (3)"
                     >
                         <img
                             src="cursors/new_cursor_square.svg"
@@ -490,7 +490,7 @@
                     <button
                         class="tool-btn"
                         id="tool-circle"
-                        title="Circle (C)"
+                        title="Circle (4)"
                     >
                         <img src="cursors/new_cursor_circle.svg" alt="Circle" />
                     </button>
@@ -1359,7 +1359,7 @@
                                 : null;
                         }
                     }
-                    if (e.key === "d" || e.key === "D") {
+                    if (e.key === "1") {
                         e.preventDefault();
                         if (state.polylineActive) {
                             state.previewStroke = null;
@@ -1373,7 +1373,7 @@
                         state.previewStroke = null;
                         updateCursor();
                     }
-                    if (e.key === "p" || e.key === "P") {
+                    if (e.key === "2") {
                         e.preventDefault();
                         if (state.polylineActive) {
                             state.previewStroke = null;
@@ -1388,7 +1388,7 @@
                             updateCursor();
                         }
                     }
-                    if (e.key === "c" || e.key === "C") {
+                    if (e.key === "4") {
                         e.preventDefault();
                         if (state.polylineActive) {
                             state.previewStroke = null;
@@ -1400,7 +1400,7 @@
                         if (!state.ellipseMode) state.previewStroke = null;
                         updateCursor();
                     }
-                    if (e.key === "r" || e.key === "R") {
+                    if (e.key === "3") {
                         e.preventDefault();
                         if (state.polylineActive) {
                             state.previewStroke = null;
@@ -1473,7 +1473,11 @@
                             }
                         }
                     }
-                    if (e.key === "ArrowLeft") {
+                    if (
+                        e.key === "ArrowLeft" ||
+                        e.key === "a" ||
+                        e.key === "A"
+                    ) {
                         e.preventDefault();
                         if (!state.isPlaying) {
                             selectFrame(
@@ -1484,7 +1488,11 @@
                             );
                         }
                     }
-                    if (e.key === "ArrowRight") {
+                    if (
+                        e.key === "ArrowRight" ||
+                        e.key === "d" ||
+                        e.key === "D"
+                    ) {
                         e.preventDefault();
                         if (!state.isPlaying) {
                             selectFrame(
