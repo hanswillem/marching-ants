@@ -609,6 +609,7 @@
                 spaceRepositioning: false,
                 spaceRepoLastPos: null,
                 lastMousePos: null,
+                cursorTone: "black",
 
                 // Pan mode (G key) — translate strokes within the canvas
                 panMode: false,
@@ -915,13 +916,55 @@
             // ═══════════════════════════════════════════════════════════════
             //  Cursor management
             // ═══════════════════════════════════════════════════════════════
+            function cursorBrightnessAt(pos) {
+                const x = Math.round(pos.x);
+                const y = Math.round(pos.y);
+                const radius = 2;
+                const sx = Math.max(0, x - radius);
+                const sy = Math.max(0, y - radius);
+                const sw = Math.min(canvas.width - sx, radius * 2 + 1);
+                const sh = Math.min(canvas.height - sy, radius * 2 + 1);
+                if (sw <= 0 || sh <= 0) return 255;
+
+                let imageData;
+                try {
+                    imageData = ctx.getImageData(sx, sy, sw, sh).data;
+                } catch {
+                    return 255;
+                }
+
+                let total = 0;
+                for (let i = 0; i < imageData.length; i += 4) {
+                    const alpha = imageData[i + 3] / 255;
+                    const r = imageData[i] * alpha + 255 * (1 - alpha);
+                    const g = imageData[i + 1] * alpha + 255 * (1 - alpha);
+                    const b = imageData[i + 2] * alpha + 255 * (1 - alpha);
+                    total += 0.2126 * r + 0.7152 * g + 0.0722 * b;
+                }
+                return total / (imageData.length / 4);
+            }
+
+            function updateCursorContrast(pos) {
+                const brightness = cursorBrightnessAt(pos);
+                const shouldUseWhite =
+                    state.cursorTone === "white"
+                        ? brightness < 145
+                        : brightness < 110;
+                const nextTone = shouldUseWhite ? "white" : "black";
+                if (nextTone === state.cursorTone) return;
+                state.cursorTone = nextTone;
+                updateCursor();
+            }
+
             function updateCursor() {
+                const toneSuffix =
+                    state.cursorTone === "white" ? "_white" : "";
                 if (state.eraserMode) {
                     canvas.style.cursor =
-                        'url("cursors/new_cursor_erase.svg") 9 9, crosshair';
+                        `url("cursors/new_cursor_erase${toneSuffix}.svg") 9 9, crosshair`;
                 } else {
                     canvas.style.cursor =
-                        'url("cursors/new_cursor_regular.svg") 12 12, crosshair';
+                        `url("cursors/new_cursor_regular${toneSuffix}.svg") 12 12, crosshair`;
                 }
                 updateToolButtons();
             }
@@ -1041,6 +1084,7 @@
             canvas.addEventListener("mousemove", (e) => {
                 const pos = getPos(e);
                 state.lastMousePos = { ...pos };
+                updateCursorContrast(pos);
 
                 // Pan: accumulate canvas-space delta for live preview
                 if (state.isPanning) {
@@ -1431,17 +1475,22 @@
                     }
                     if (e.key === "ArrowLeft") {
                         e.preventDefault();
-                        if (!state.isPlaying && state.currentFrameIndex > 0) {
-                            selectFrame(state.currentFrameIndex - 1);
+                        if (!state.isPlaying) {
+                            selectFrame(
+                                (state.currentFrameIndex -
+                                    1 +
+                                    state.frames.length) %
+                                    state.frames.length,
+                            );
                         }
                     }
                     if (e.key === "ArrowRight") {
                         e.preventDefault();
-                        if (
-                            !state.isPlaying &&
-                            state.currentFrameIndex < state.frames.length - 1
-                        ) {
-                            selectFrame(state.currentFrameIndex + 1);
+                        if (!state.isPlaying) {
+                            selectFrame(
+                                (state.currentFrameIndex + 1) %
+                                    state.frames.length,
+                            );
                         }
                     }
                 }
